@@ -13,6 +13,7 @@
   },
   "scripts": {
     "dev": "concurrently -n server,client -c yellow,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev": "concurrently -k -n server,client -c blue,magenta \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "npm run dev -w server",
     "dev:client": "npm run dev -w client",
     "build": "npm run build -w client",
@@ -22,5 +23,6 @@
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
+    "concurrently": "10.0.5"
   }
 }
