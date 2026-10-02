@@ -87,38 +87,6 @@ order_time = max(earliest_order_time, latest_order_time − safety_buffer)
 valid if: earliest_order_time ≤ latest_order_time
 ```
 
-### Pseudocode
-
-```python
-for ingredient in aggregated_ingredients:
-    supplier  = cheapest_supplier(ingredient)   # based on Open Prices data
-    lead_time = supplier.delivery_lead_time
-
-    # Group this ingredient's uses into deliveries that stay fresh
-    for delivery_group in group_uses_by_freshness(ingredient):
-        # Earliest bake start in the group drives the deadline
-        bake_start = min(use.deadline - (use.item.prep_time + use.item.bake_time)
-                         for use in delivery_group)
-        # Last bake start in the group must still be within shelf life
-        last_use = max(use.deadline - (use.item.prep_time + use.item.bake_time)
-                       for use in delivery_group)
-
-        latest_order   = bake_start - lead_time
-        earliest_order = last_use - ingredient.shelf_life - lead_time
-
-        if earliest_order > latest_order:
-            flag_conflict(ingredient, delivery_group)  # surfaced on dashboard
-        else:
-            order_time = max(earliest_order, latest_order - SAFETY_BUFFER)
-            schedule_purchase(ingredient, supplier,
-                              quantity=sum(use.quantity for use in delivery_group),
-                              at=order_time)
-```
-
-> **Shared ingredients:** When several orders need the same ingredient, Daniel combines them into one delivery as long as the ingredient will still be fresh for the last order that uses it. If it wouldn't be, Daniel splits the purchase into multiple deliveries.
-
----
-
 ## 🧰 Tech Stack
 
 | Layer | Technology |
@@ -278,15 +246,6 @@ Price data from [Open Prices](https://prices.openfoodfacts.org) by Open Food Fac
 
 ---
 
-## 👩‍💻 Team
-
-| Name | Role |
-|---|---|
-| Linda Lian | Frontend & Product Lead: React UI, dashboard, demo, and pitch |
-| Peicheng Yue | Backend & Data Lead: Express API, PostgreSQL/Prisma, seed data, deployment |
-| Emilee Zhang | Algorithms & Integrations Lead: aggregation, timing algorithm, supplier adapters, scheduler |
-
----
 
 ## 📄 License
 
