@@ -22,9 +22,10 @@ router.get('/menu', wrap(async (_req, res) => {
 }));
 
 router.post('/menu', wrap(async (req, res) => {
-  const { name, instructions = '', prepMinutes, bakeMinutes, ingredients } = req.body ?? {};
+  const { name, instructions = '', batchSize = 1, batchUnit, prepMinutes, bakeMinutes, ingredients } = req.body ?? {};
   if (!name?.trim()) return bad(res, 'Name is required.');
   if (!(prepMinutes >= 0) || !(bakeMinutes >= 0)) return bad(res, 'Prep and bake times must be 0 or more minutes.');
+  if (!Number.isInteger(batchSize) || batchSize < 1) return bad(res, 'Batch size must be a whole number of 1 or more.');
   if (!Array.isArray(ingredients) || ingredients.length === 0) return bad(res, 'Add at least one ingredient.');
 
   const rows = [];
@@ -47,6 +48,7 @@ router.post('/menu', wrap(async (req, res) => {
   );
 
   try {
+    const created = [];
     const item = await prisma.$transaction(async (tx) => {
       const recipe = [];
       for (const row of rows) {
@@ -54,6 +56,7 @@ router.post('/menu', wrap(async (req, res) => {
         if (ingredient && ingredient.unit !== row.unit) {
           throw Object.assign(new Error(`"${row.name}" is already tracked in ${ingredient.unit}, not ${row.unit}.`), { status: 400 });
         }
+        if (!ingredient) created.push(row.name);
         ingredient ??= await tx.ingredient.create({
           data: {
             name: row.name,
@@ -69,6 +72,8 @@ router.post('/menu', wrap(async (req, res) => {
         data: {
           name: name.trim(),
           instructions,
+          batchSize,
+          batchUnit: batchUnit?.trim() || 'batch',
           prepMinutes: Math.round(prepMinutes),
           bakeMinutes: Math.round(bakeMinutes),
           ingredients: { create: recipe },
@@ -76,6 +81,9 @@ router.post('/menu', wrap(async (req, res) => {
         include: menuInclude,
       });
     });
+    // Fetch prices for brand-new ingredients now, so the cheapest supplier is known before any order needs them.
+    const fresh = item.ingredients.map((r) => r.ingredient).filter((i) => created.includes(i.name));
+    await Promise.all(fresh.map((i) => refreshPrices(i).catch((err) => console.warn(`[pricing] ${i.name}: ${err.message}`))));
     res.status(201).json(item);
   } catch (err) {
     if (err.status === 400) return bad(res, err.message);
