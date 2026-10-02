@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from './db.js';
 import { syncPlan } from './services/planner.js';
+import { DEFAULT_SHELF_LIFE_HOURS, lookupShelfLifeHours } from './services/shelfLife.js';
 import { refreshPrices, DEFAULT_FALLBACK_PRICE } from './services/pricing.js';
 
 export const router = Router();
@@ -35,6 +36,14 @@ router.post('/menu', wrap(async (req, res) => {
     rows.push({ ...row, name: ingName });
   }
 
+  // Look up shelf life for brand-new ingredients before opening the transaction.
+  const known = new Set((await prisma.ingredient.findMany({ where: { name: { in: rows.map((r) => r.name) } } })).map((i) => i.name));
+  await Promise.all(
+    rows.filter((r) => !known.has(r.name) && !(r.shelfLifeHours > 0)).map(async (r) => {
+      r.shelfLifeHours = await lookupShelfLifeHours(r.name);
+    }),
+  );
+
   try {
     const item = await prisma.$transaction(async (tx) => {
       const recipe = [];
@@ -47,7 +56,7 @@ router.post('/menu', wrap(async (req, res) => {
           data: {
             name: row.name,
             unit: row.unit,
-            shelfLifeHours: row.shelfLifeHours > 0 ? Math.round(row.shelfLifeHours) : 168,
+            shelfLifeHours: row.shelfLifeHours > 0 ? Math.round(row.shelfLifeHours) : DEFAULT_SHELF_LIFE_HOURS,
             categoryTag: row.categoryTag?.trim() || null,
             fallbackPrice: DEFAULT_FALLBACK_PRICE[row.unit],
           },
