@@ -12,6 +12,6 @@ export const config = {
   safetyBufferHours: Number(process.env.ORDER_SAFETY_BUFFER_HOURS ?? 2),
   schedulerCron: process.env.SCHEDULER_CRON ?? '*/5 * * * *',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
-  shelfLifeModel: process.env.SHELF_LIFE_MODEL ?? 'claude-haiku-4-5-20251001',
+  ingredientLookupModel: process.env.INGREDIENT_LOOKUP_MODEL ?? 'claude-haiku-4-5-20251001',
   bakeryAddress: process.env.BAKERY_DELIVERY_ADDRESS ?? '',
 };

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, fmtQty } from '../api.js';
 
-const blankRow = () => ({ name: '', quantity: '', unit: 'g', categoryTag: '' });
+const blankRow = () => ({ name: '', quantity: '', unit: 'g' });
 const blankForm = () => ({ name: '', instructions: '', prepMinutes: '', bakeMinutes: '', ingredients: [blankRow()] });
 
 export default function Menu() {
@@ -28,7 +28,6 @@ export default function Menu() {
           name: r.name,
           unit: r.unit,
           quantity: Number(r.quantity),
-          categoryTag: r.categoryTag,
         })),
       });
       setForm(null);
@@ -74,13 +73,12 @@ export default function Menu() {
               <select value={r.unit} onChange={(e) => setRow(i, { unit: e.target.value })}>
                 <option value="g">g</option><option value="ml">ml</option><option value="each">each</option>
               </select>
-              <input placeholder="Open Food Facts category (opt.)" value={r.categoryTag} onChange={(e) => setRow(i, { categoryTag: e.target.value })} />
               {form.ingredients.length > 1 && (
                 <button type="button" className="secondary" onClick={() => setForm({ ...form, ingredients: form.ingredients.filter((_, j) => j !== i) })}>✕</button>
               )}
             </div>
           ))}
-          <p className="muted">Shelf life is looked up automatically for new ingredients. Category only applies the first time an ingredient is added.</p>
+          <p className="muted">Shelf life and price category are looked up automatically the first time an ingredient is added.</p>
           <div className="row">
             <button type="button" className="secondary" onClick={() => setForm({ ...form, ingredients: [...form.ingredients, blankRow()] })}>+ Ingredient</button>
             <span className="spacer" />

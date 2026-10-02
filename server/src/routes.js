@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from './db.js';
 import { syncPlan } from './services/planner.js';
-import { DEFAULT_SHELF_LIFE_HOURS, lookupShelfLifeHours } from './services/shelfLife.js';
+import { DEFAULT_SHELF_LIFE_HOURS, lookupIngredientInfo } from './services/ingredientInfo.js';
 import { refreshPrices, DEFAULT_FALLBACK_PRICE } from './services/pricing.js';
 
 export const router = Router();
@@ -36,11 +36,13 @@ router.post('/menu', wrap(async (req, res) => {
     rows.push({ ...row, name: ingName });
   }
 
-  // Look up shelf life for brand-new ingredients before opening the transaction.
+  // Look up shelf life and price category for brand-new ingredients before opening the transaction.
   const known = new Set((await prisma.ingredient.findMany({ where: { name: { in: rows.map((r) => r.name) } } })).map((i) => i.name));
   await Promise.all(
-    rows.filter((r) => !known.has(r.name) && !(r.shelfLifeHours > 0)).map(async (r) => {
-      r.shelfLifeHours = await lookupShelfLifeHours(r.name);
+    rows.filter((r) => !known.has(r.name)).map(async (r) => {
+      const info = await lookupIngredientInfo(r.name);
+      if (!(r.shelfLifeHours > 0)) r.shelfLifeHours = info.shelfLifeHours;
+      if (!r.categoryTag?.trim()) r.categoryTag = info.categoryTag;
     }),
   );
 

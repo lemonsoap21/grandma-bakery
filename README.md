@@ -201,7 +201,8 @@ DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/daniel
 # Price data (Open Prices requires no API key for reading)
 OPEN_PRICES_BASE_URL=https://prices.openfoodfacts.org/api
 
-# Shelf life lookup for new ingredients (optional; without it a 7-day default is used)
+# Shelf life and price category lookup for new ingredients (optional; without it a 7-day
+# default is used and prices fall back to sample stores)
 ANTHROPIC_API_KEY=
 
 # Ordering mode: "mock" simulates purchases and delivery
