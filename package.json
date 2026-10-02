@@ -1,0 +1,22 @@
+{
+  "name": "daniel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Daniel turns a bakery's orders into perfectly timed, lowest-cost ingredient deliveries.",
+  "license": "MIT",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w client",
+    "test": "npm test -w server",
+    "db:migrate": "npm run db:migrate -w server",
+    "db:seed": "npm run db:seed -w server"
+  }
+}

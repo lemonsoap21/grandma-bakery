@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Quantities and prices are always in the ingredient's base unit: g, ml or each.
+model Ingredient {
+  id                Int                @id @default(autoincrement())
+  name              String             @unique
+  unit              String
+  shelfLifeHours    Int                @default(168)
+  categoryTag       String? // Open Food Facts category, e.g. "en:butters"
+  fallbackPrice     Float // price per base unit used when Open Prices has no data
+  recipeIngredients RecipeIngredient[]
+  prices            Price[]
+  purchases         Purchase[]
+}
+
+model MenuItem {
+  id           Int                @id @default(autoincrement())
+  name         String             @unique
+  instructions String             @default("")
+  prepMinutes  Int
+  bakeMinutes  Int
+  ingredients  RecipeIngredient[]
+  orderItems   OrderItem[]
+}
+
+model RecipeIngredient {
+  id           Int        @id @default(autoincrement())
+  menuItemId   Int
+  ingredientId Int
+  quantity     Float // per batch/unit of the menu item
+  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([menuItemId, ingredientId])
+}
+
+model Order {
+  id           Int         @id @default(autoincrement())
+  customerName String
+  deliveryAt   DateTime
+  status       String      @default("OPEN") // OPEN | CANCELLED
+  createdAt    DateTime    @default(now())
+  items        OrderItem[]
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int
+  menuItemId Int
+  quantity   Int
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+model Supplier {
+  id            Int        @id @default(autoincrement())
+  key           String     @unique // "osm:node:123" or "fallback:sample-mart"
+  name          String
+  address       String?
+  leadTimeHours Int // simulated
+  prices        Price[]
+  purchases     Purchase[]
+}
+
+model Price {
+  id           Int        @id @default(autoincrement())
+  ingredientId Int
+  supplierId   Int
+  pricePerUnit Float
+  currency     String     @default("USD")
+  source       String // open_prices | fallback
+  observedAt   DateTime
+  fetchedAt    DateTime   @default(now())
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  supplier     Supplier   @relation(fields: [supplierId], references: [id])
+
+  @@unique([ingredientId, supplierId])
+}
+
+model Purchase {
+  id             Int        @id @default(autoincrement())
+  ingredientId   Int
+  supplierId     Int
+  quantity       Float
+  unitPrice      Float
+  totalCost      Float
+  currency       String
+  orderAt        DateTime
+  arriveBy       DateTime
+  status         String     @default("SCHEDULED") // SCHEDULED | PLACED | DELIVERED
+  orderItemIds   Int[] // order items this delivery covers
+  confirmationId String?
+  placedAt       DateTime?
+  createdAt      DateTime   @default(now())
+  ingredient     Ingredient @relation(fields: [ingredientId], references: [id])
+  supplier       Supplier   @relation(fields: [supplierId], references: [id])
+}
