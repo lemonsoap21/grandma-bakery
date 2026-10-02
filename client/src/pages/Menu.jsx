@@ -87,7 +87,7 @@ export default function Menu() {
               )}
             </div>
           ))}
-          <p className="muted">Shelf life and price category are looked up automatically the first time an ingredient is added.</p>
+          <p className="muted">Shelf life and current prices are looked up automatically the first time an ingredient is added.</p>
           <div className="row">
             <button type="button" className="secondary" onClick={() => setForm({ ...form, ingredients: [...form.ingredients, blankRow()] })}>+ Ingredient</button>
             <span className="spacer" />

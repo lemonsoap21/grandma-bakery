@@ -65,7 +65,7 @@ th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color
 tr.dim { opacity: 0.5; }
 
 .tag { padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; border: 1px solid var(--border); }
-.tag.open_prices, .tag.DELIVERED, .tag.OPEN { border-color: #4c9a5f; }
+.tag.web_search, .tag.DELIVERED, .tag.OPEN { border-color: #4c9a5f; }
 .tag.PLACED, .tag.SCHEDULED { border-color: var(--accent); }
 
 .alert { padding: 10px 14px; border-radius: 10px; margin: 12px 0; }

@@ -6,7 +6,7 @@
 ![React](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?logo=react&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?logo=node.js&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white)
-![Open Prices](https://img.shields.io/badge/Price%20Data-Open%20Prices-green)
+![Claude](https://img.shields.io/badge/Price%20Data-Claude%20web%20search-green)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
 > Built by **Linda Lian**, **Peicheng Yue**, and **Emilee Zhang**.
@@ -36,7 +36,7 @@ Small bakeries spend hours every week manually figuring out what ingredients the
 | 🛒 **Order Intake** | Customers or staff place orders specifying items, quantities, and delivery date/time. |
 | 📅 **Order Tracking** | See every item due, how many, and when, as a clear production schedule. |
 | ⚖️ **Ingredient Aggregation** | Scales each recipe by order size and totals ingredient needs across all upcoming orders. |
-| 💲 **Price Comparison** | Pulls real grocery prices from the Open Prices API and finds the cheapest store for each ingredient. |
+| 💲 **Price Comparison** | Looks up current Canadian grocery prices with Claude web search and finds the cheapest store for each ingredient. |
 | 🤖 **Automated Purchasing** | Places ingredient orders with the cheapest supplier(s) for delivery to the bakery (simulated in this version). |
 | ⏱️ **Smart Order Timing** | Balances shelf life, delivery lead time, and prep/bake time to pick the right moment to order. |
 
@@ -47,7 +47,7 @@ Small bakeries spend hours every week manually figuring out what ingredients the
 1. **Set up the menu.** The bakery enters menu items with ingredients, per-batch quantities, instructions, and prep/bake times.
 2. **Receive orders.** A customer or staff member places an order with items, quantities, and a delivery deadline.
 3. **Aggregate ingredients.** Daniel scales each recipe by order quantity and sums ingredient needs across all upcoming orders.
-4. **Compare prices.** For each ingredient, Daniel looks up real prices from nearby stores using the Open Prices API.
+4. **Compare prices.** For each ingredient, Daniel looks up current prices at Canadian grocery stores using Claude web search.
 5. **Time the order.** The timing algorithm calculates the best window to place each ingredient order.
 6. **Place the order.** At the scheduled time, Daniel orders from the cheapest supplier(s).
 7. **Deliver to bakery.** Ingredients arrive fresh, with enough time to prep and bake before the customer deadline.
@@ -56,7 +56,7 @@ Small bakeries spend hours every week manually figuring out what ingredients the
 flowchart LR
     A[🧾 Menu Setup<br/>ingredients, quantities,<br/>prep & bake time] --> B[🛒 Order Placed<br/>items, quantity,<br/>delivery deadline]
     B --> C[⚖️ Ingredient Aggregation<br/>scale recipes,<br/>sum across orders]
-    C --> D[💲 Price Comparison<br/>real prices from<br/>Open Prices]
+    C --> D[💲 Price Comparison<br/>current prices via<br/>Claude web search]
     D --> E[⏱️ Timing Algorithm<br/>shelf life, lead time,<br/>prep & bake time]
     E --> F[🤖 Automated Purchase<br/>cheapest supplier]
     F --> G[🚚 Delivered to Bakery]
@@ -91,7 +91,7 @@ valid if: earliest_order_time ≤ latest_order_time
 
 ```python
 for ingredient in aggregated_ingredients:
-    supplier  = cheapest_supplier(ingredient)   # based on Open Prices data
+    supplier  = cheapest_supplier(ingredient)   # based on web-searched prices
     lead_time = supplier.delivery_lead_time
 
     # Group this ingredient's uses into deliveries that stay fresh
@@ -127,7 +127,7 @@ for ingredient in aggregated_ingredients:
 | **Backend** | Node.js + Express |
 | **Scheduler** | node-cron (runs inside the backend) |
 | **Database** | PostgreSQL with Prisma ORM |
-| **Price Data** | Open Prices API (Open Food Facts), with simulated ordering and delivery |
+| **Price Data** | Claude API with web search, with simulated ordering and delivery |
 | **Hosting** | Vercel (frontend), Render (backend + database) |
 
 ---
@@ -139,7 +139,7 @@ Daniel is made up of these main components:
 - **Web Client** (React + Vite): UI for managing menus, placing orders, and viewing the production schedule and sourcing dashboard.
 - **API Server** (Node.js + Express): Handles menu, order, and ingredient logic; exposes REST endpoints consumed by the client.
 - **Database** (PostgreSQL + Prisma): Stores menu items, recipes, ingredients, orders, suppliers, cached prices, and scheduled purchases.
-- **Pricing Service:** Pulls real prices and store locations from the Open Prices API and caches them in the database.
+- **Pricing Service:** Looks up current grocery prices with Claude web search and caches them in the database for a week.
 - **Scheduler** (node-cron): Checks for due purchases every few minutes and triggers them at their scheduled time.
 - **Purchasing Service:** Places orders through the `SupplierAdapter` interface, which currently simulates purchases and delivery.
 
@@ -151,12 +151,12 @@ Daniel is made up of these main components:
       [Pricing Svc]  [Scheduler]  [Purchasing Svc]
              │                         │
              ▼                         ▼
-     [Open Prices API]          [SupplierAdapter]
-     real prices + stores        simulated ordering
+  [Claude web search]           [SupplierAdapter]
+   current prices + stores       simulated ordering
                                  & delivery lead times
 ```
 
-The client talks to the server over REST. The Pricing Service pulls real prices and store locations from the Open Prices API and caches them in the database. The scheduler runs inside the server process and reads scheduled purchases from the database. Ordering goes through the `SupplierAdapter` interface, so a real grocer integration can plug in without changing the rest of the app.
+The client talks to the server over REST. The Pricing Service looks up current grocery prices with Claude web search and caches them in the database. The scheduler runs inside the server process and reads scheduled purchases from the database. Ordering goes through the `SupplierAdapter` interface, so a real grocer integration can plug in without changing the rest of the app.
 
 ---
 
@@ -168,7 +168,7 @@ The client talks to the server over REST. The Pricing Service pulls real prices 
 - npm
 - PostgreSQL 15+
 
-No API keys are needed. Open Prices is free to read from.
+An [Anthropic API key](https://console.anthropic.com) is needed for live prices and shelf-life lookups. Without one, Daniel uses a 7-day shelf life and sample prices.
 
 ### Installation
 
@@ -198,11 +198,8 @@ PORT=4000
 # Database
 DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/daniel
 
-# Price data (Open Prices requires no API key for reading)
-OPEN_PRICES_BASE_URL=https://prices.openfoodfacts.org/api
-
-# Shelf life and price category lookup for new ingredients (optional; without it a 7-day
-# default is used and prices fall back to sample stores)
+# Claude web search for ingredient shelf life and current grocery prices (optional; without it
+# a 7-day shelf life is used and prices fall back to sample stores)
 ANTHROPIC_API_KEY=
 
 # Ordering mode: "mock" simulates purchases and delivery
@@ -257,15 +254,15 @@ The **Dashboard** shows your production schedule, aggregated ingredient needs, t
 
 ## 🔌 API Integrations
 
-### Open Prices (Open Food Facts)
+### Claude web search (Anthropic API)
 
-[Open Prices](https://prices.openfoodfacts.org) is an open, crowdsourced database of real grocery prices from stores around the world. No API key is required for reading data. API docs: https://prices.openfoodfacts.org/api/docs
+Daniel asks Claude, with its web search tool, for current shelf prices of each ingredient at Canadian grocers (Walmart, Real Canadian Superstore, Costco and others), in CAD. Each store it finds becomes a supplier. Prices are cached for a week, and you can refresh them any time from the dashboard. The same lookup finds each new ingredient's raw shelf life.
 
 | Data | Source | How Daniel uses it |
 |---|---|---|
-| Prices | ✅ Open Prices | Finds the cheapest store for each ingredient |
-| Store locations | ✅ Open Prices (via OpenStreetMap) | Lists real nearby stores as suppliers |
-| Price history | ✅ Open Prices | Uses the most recent reported price per store |
+| Prices | ✅ Claude web search | Finds the cheapest store for each ingredient |
+| Stores | ✅ Claude web search | Lists the stores it found prices at as suppliers |
+| Shelf life | ✅ Claude web search | Sets how early an ingredient can arrive |
 | Availability | ⚙️ Simulated | Assumes in stock unless flagged in mock data |
 | Delivery lead times | ⚙️ Simulated | Feeds the timing algorithm |
 | Ordering | ⚙️ Simulated | Purchases are recorded in our database |
@@ -274,11 +271,8 @@ The **Dashboard** shows your production schedule, aggregated ingredient needs, t
 Grocers don't offer public APIs for placing orders, so Daniel uses real price data with a simulated ordering layer. All ordering goes through our `SupplierAdapter` interface, so a real grocer integration can be added without changing the rest of the app.
 
 ### Limitations
-- Open Prices is crowdsourced, so coverage varies by region and product. Where an ingredient has no recent price data, Daniel falls back to sample prices.
-- Prices reflect what shoppers reported, which may not match a store's current shelf price.
-
-### Attribution
-Price data from [Open Prices](https://prices.openfoodfacts.org) by Open Food Facts, available under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/).
+- Prices come from store websites and flyers found by web search, so they are estimates, not live checkout prices, and can miss sales. Where nothing is found, Daniel falls back to sample prices.
+- Each price lookup is a paid API call with a few web searches.
 
 ---
 

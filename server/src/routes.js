@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from './db.js';
 import { syncPlan } from './services/planner.js';
-import { DEFAULT_SHELF_LIFE_HOURS, lookupIngredientInfo } from './services/ingredientInfo.js';
+import { DEFAULT_SHELF_LIFE_HOURS, lookupShelfLifeHours } from './services/ingredientInfo.js';
 import { refreshPrices, DEFAULT_FALLBACK_PRICE } from './services/pricing.js';
 
 export const router = Router();
@@ -37,13 +37,11 @@ router.post('/menu', wrap(async (req, res) => {
     rows.push({ ...row, name: ingName });
   }
 
-  // Look up shelf life and price category for brand-new ingredients before opening the transaction.
+  // Look up shelf life for brand-new ingredients before opening the transaction.
   const known = new Set((await prisma.ingredient.findMany({ where: { name: { in: rows.map((r) => r.name) } } })).map((i) => i.name));
   await Promise.all(
-    rows.filter((r) => !known.has(r.name)).map(async (r) => {
-      const info = await lookupIngredientInfo(r.name);
-      if (!(r.shelfLifeHours > 0)) r.shelfLifeHours = info.shelfLifeHours;
-      if (!r.categoryTag?.trim()) r.categoryTag = info.categoryTag;
+    rows.filter((r) => !known.has(r.name) && !(r.shelfLifeHours > 0)).map(async (r) => {
+      r.shelfLifeHours = await lookupShelfLifeHours(r.name);
     }),
   );
 
@@ -81,9 +79,9 @@ router.post('/menu', wrap(async (req, res) => {
         include: menuInclude,
       });
     });
-    // Fetch prices for brand-new ingredients now, so the cheapest supplier is known before any order needs them.
+    // Look up prices for brand-new ingredients in the background; a web search takes a while.
     const fresh = item.ingredients.map((r) => r.ingredient).filter((i) => created.includes(i.name));
-    await Promise.all(fresh.map((i) => refreshPrices(i).catch((err) => console.warn(`[pricing] ${i.name}: ${err.message}`))));
+    for (const i of fresh) refreshPrices(i).catch((err) => console.warn(`[pricing] ${i.name}: ${err.message}`));
     res.status(201).json(item);
   } catch (err) {
     if (err.status === 400) return bad(res, err.message);
@@ -154,8 +152,10 @@ router.delete('/orders/:id', wrap(async (req, res) => {
 
 router.post('/prices/refresh', wrap(async (_req, res) => {
   const ingredients = await prisma.ingredient.findMany();
-  let live = 0;
-  for (const ingredient of ingredients) live += (await refreshPrices(ingredient)) > 0 ? 1 : 0;
+  const results = await Promise.all(
+    ingredients.map((i) => refreshPrices(i).catch((err) => (console.warn(`[pricing] ${i.name}: ${err.message}`), 0))),
+  );
+  const live = results.filter((n) => n > 0).length;
   await replan();
   res.json({ ingredients: ingredients.length, withLivePrices: live });
 }));
