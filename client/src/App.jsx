@@ -7,7 +7,7 @@ export default function App() {
   return (
     <>
       <header className="topbar">
-        <span className="brand">🥐 Daniel</span>
+        <img className="brand" src="/logo.png" alt="Daniel" />
         <nav>
           <NavLink to="/dashboard">Dashboard</NavLink>
           <NavLink to="/orders">Orders</NavLink>
