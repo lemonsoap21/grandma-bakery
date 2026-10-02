@@ -52,3 +52,28 @@ test('planOrderWindow flags a group that cannot stay fresh', () => {
   assert.equal(plan.ok, false);
   assert.equal(plan.reason, 'shelf_life');
 });
+
+test('planOrderWindow lands ingredients a full day before baking with a 24h buffer', () => {
+  const group = [{ bakeStart: at(0) }];
+  const plan = planOrderWindow({ group, leadTimeHours: 10, shelfLifeHours: 24 * 90, safetyBufferHours: 24, now: at(-200) });
+  assert.ok(plan.ok);
+  assert.equal(plan.arriveBy.getTime(), at(-24).getTime());
+  assert.equal(plan.orderAt.getTime(), at(-34).getTime());
+});
+
+test('planOrderWindow gives up part of the buffer when shelf life requires it', () => {
+  const group = [{ bakeStart: at(0) }, { bakeStart: at(60) }];
+  // 72h shelf life: arrival can't be earlier than 60-72 = -12h, so only a 12h buffer is possible.
+  const plan = planOrderWindow({ group, leadTimeHours: 10, shelfLifeHours: 72, safetyBufferHours: 24, now: at(-200) });
+  assert.ok(plan.ok);
+  assert.equal(plan.arriveBy.getTime(), at(-12).getTime());
+});
+
+test('planOrderWindow gives up part of the buffer when the deadline is close', () => {
+  const group = [{ bakeStart: at(0) }];
+  // Only 15h until baking with 10h lead: order now, arrive 5h before baking.
+  const plan = planOrderWindow({ group, leadTimeHours: 10, shelfLifeHours: 24 * 90, safetyBufferHours: 24, now: at(-15) });
+  assert.ok(plan.ok);
+  assert.equal(plan.orderAt.getTime(), at(-15).getTime());
+  assert.equal(plan.arriveBy.getTime(), at(-5).getTime());
+});

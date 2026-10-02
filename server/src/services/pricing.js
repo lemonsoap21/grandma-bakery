@@ -14,7 +14,7 @@ export const DEFAULT_FALLBACK_PRICE = { g: 0.01, ml: 0.005, each: 0.3 };
 
 async function fetchOpenPrices(categoryTag) {
   const url = new URL(`${config.openPricesBaseUrl}/v1/prices`);
-  url.search = new URLSearchParams({ category_tag: categoryTag, order_by: '-date', size: '50' }).toString();
+  url.search = new URLSearchParams({ category_tag: categoryTag, currency: config.currency, order_by: '-date', size: '50' }).toString();
   const res = await fetch(url, {
     signal: AbortSignal.timeout(8000),
     headers: { 'User-Agent': 'Daniel-Bakery/0.1 (hackathon project)' },
@@ -73,7 +73,7 @@ async function refreshFromOpenPrices(ingredient) {
       ingredientId: ingredient.id,
       supplierId: supplier.id,
       pricePerUnit,
-      currency: item.currency ?? 'USD',
+      currency: item.currency ?? config.currency,
       source: 'open_prices',
       observedAt: new Date(item.date ?? Date.now()),
     });
@@ -93,7 +93,7 @@ async function refreshFallback(ingredient) {
       ingredientId: ingredient.id,
       supplierId: supplier.id,
       pricePerUnit: ingredient.fallbackPrice * store.factor,
-      currency: 'USD',
+      currency: config.currency,
       source: 'fallback',
       observedAt: new Date(),
     });

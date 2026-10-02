@@ -73,7 +73,7 @@ Daniel works **backwards from the customer's delivery deadline** to decide when 
 2. **When must ingredients arrive?** That baking start time is the latest acceptable ingredient arrival.
 3. **When must we order?** Subtract the supplier's delivery lead time. This gives the **latest safe order time**.
 4. **Will it stay fresh?** Ingredients shouldn't arrive so early that they spoil before use. Shelf life sets the **earliest sensible arrival time**, which gives an **earliest order time**.
-5. **Pick a time in the window.** Daniel orders as late as possible for maximum freshness, minus a safety buffer in case a delivery runs late.
+5. **Pick a time in the window.** Daniel orders as late as possible for maximum freshness, but aims for the delivery to land at least a day (24h by default) before baking starts, in case a delivery runs late. If shelf life or the calendar doesn't allow a full day, it gets as close as it can.
 
 ### Formula
 
@@ -209,7 +209,7 @@ ANTHROPIC_API_KEY=
 SUPPLIER_MODE=mock
 
 # Timing
-ORDER_SAFETY_BUFFER_HOURS=2
+ORDER_SAFETY_BUFFER_HOURS=24
 SCHEDULER_CRON=*/5 * * * *
 
 # Bakery delivery address

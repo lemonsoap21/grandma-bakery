@@ -74,7 +74,7 @@ model Price {
   ingredientId Int
   supplierId   Int
   pricePerUnit Float
-  currency     String     @default("USD")
+  currency     String     @default("CAD")
   source       String // open_prices | fallback
   observedAt   DateTime
   fetchedAt    DateTime   @default(now())
