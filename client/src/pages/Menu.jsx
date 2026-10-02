@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api, fmtQty } from '../api.js';
 
-const blankRow = () => ({ name: '', quantity: '', unit: 'g', shelfLifeHours: '', categoryTag: '' });
-const blankForm = () => ({ name: '', instructions: '', prepMinutes: '', bakeMinutes: '', ingredients: [blankRow()] });
+const blankRow = () => ({ name: '', quantity: '', unit: 'g' });
+const blankForm = () => ({ name: '', instructions: '', batchSize: '1', batchUnit: '', prepMinutes: '', bakeMinutes: '', ingredients: [blankRow()] });
 
 export default function Menu() {
   const [items, setItems] = useState([]);
@@ -22,14 +22,14 @@ export default function Menu() {
       await api.addMenuItem({
         name: form.name,
         instructions: form.instructions,
+        batchSize: Number(form.batchSize),
+        batchUnit: form.batchUnit,
         prepMinutes: Number(form.prepMinutes),
         bakeMinutes: Number(form.bakeMinutes),
         ingredients: form.ingredients.map((r) => ({
           name: r.name,
           unit: r.unit,
           quantity: Number(r.quantity),
-          shelfLifeHours: r.shelfLifeHours ? Number(r.shelfLifeHours) : undefined,
-          categoryTag: r.categoryTag,
         })),
       });
       setForm(null);
@@ -67,7 +67,14 @@ export default function Menu() {
           </div>
           <label>Instructions<textarea rows="3" value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} /></label>
 
-          <h3>Ingredients (per batch/unit)</h3>
+          <h3>Batch size</h3>
+          <div className="row">
+            <label>This recipe makes<input type="number" min="1" step="1" required value={form.batchSize} onChange={(e) => setForm({ ...form, batchSize: e.target.value })} /></label>
+            <label>Called<input placeholder="e.g. cookies" value={form.batchUnit} onChange={(e) => setForm({ ...form, batchUnit: e.target.value })} /></label>
+          </div>
+          <p className="muted">Enter the ingredient amounts below for one full batch. Orders are placed in {form.batchUnit.trim() || 'pieces'}, and amounts are scaled to match, e.g. a 24-cookie recipe needs half the ingredients for an order of 12.</p>
+
+          <h3>Ingredients (for one batch of {form.batchSize || 1} {form.batchUnit.trim() || 'batch'})</h3>
           {form.ingredients.map((r, i) => (
             <div className="row ingredient-row" key={i}>
               <input placeholder="Ingredient" required value={r.name} onChange={(e) => setRow(i, { name: e.target.value })} />
@@ -75,14 +82,12 @@ export default function Menu() {
               <select value={r.unit} onChange={(e) => setRow(i, { unit: e.target.value })}>
                 <option value="g">g</option><option value="ml">ml</option><option value="each">each</option>
               </select>
-              <input placeholder="Shelf life (h)" type="number" min="1" value={r.shelfLifeHours} onChange={(e) => setRow(i, { shelfLifeHours: e.target.value })} />
-              <input placeholder="Open Food Facts category (opt.)" value={r.categoryTag} onChange={(e) => setRow(i, { categoryTag: e.target.value })} />
               {form.ingredients.length > 1 && (
                 <button type="button" className="secondary" onClick={() => setForm({ ...form, ingredients: form.ingredients.filter((_, j) => j !== i) })}>✕</button>
               )}
             </div>
           ))}
-          <p className="muted">Shelf life and category only apply the first time an ingredient is added; existing ingredients keep theirs.</p>
+          <p className="muted">Shelf life and current prices are looked up automatically the first time an ingredient is added.</p>
           <div className="row">
             <button type="button" className="secondary" onClick={() => setForm({ ...form, ingredients: [...form.ingredients, blankRow()] })}>+ Ingredient</button>
             <span className="spacer" />
@@ -100,7 +105,9 @@ export default function Menu() {
               <h2>{item.name}</h2>
               <button className="secondary" onClick={() => remove(item.id)}>Delete</button>
             </div>
-            <p className="muted">Prep {item.prepMinutes} min · Bake {item.bakeMinutes} min</p>
+            <p className="muted">
+              {item.batchSize > 1 && <>Makes {item.batchSize} {item.batchUnit} · </>}Prep {item.prepMinutes} min · Bake {item.bakeMinutes} min
+            </p>
             <ul>
               {item.ingredients.map((ri) => (
                 <li key={ri.id}>{fmtQty(ri.quantity, ri.ingredient.unit)} {ri.ingredient.name}</li>

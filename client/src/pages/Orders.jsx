@@ -12,6 +12,11 @@ export default function Orders() {
   const load = () => Promise.all([api.orders(), api.menu()]).then(([o, m]) => { setOrders(o); setMenu(m); }).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
 
+  // Pieces the customer is ordering are counted in the menu item's own unit (e.g. cookies).
+  const unitFor = (menuItemId) => {
+    const m = menu.find((x) => x.id === Number(menuItemId));
+    return m?.batchSize > 1 ? m.batchUnit : '';
+  };
   const setItem = (i, patch) =>
     setForm((f) => ({ ...f, items: f.items.map((it, j) => (j === i ? { ...it, ...patch } : it)) }));
 
@@ -65,6 +70,7 @@ export default function Orders() {
                 {menu.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
               <input type="number" min="1" step="1" required value={it.quantity} onChange={(e) => setItem(i, { quantity: e.target.value })} />
+              {unitFor(it.menuItemId) && <span className="muted">{unitFor(it.menuItemId)}</span>}
               {form.items.length > 1 && (
                 <button type="button" className="secondary" onClick={() => setForm({ ...form, items: form.items.filter((_, j) => j !== i) })}>✕</button>
               )}
@@ -88,7 +94,7 @@ export default function Orders() {
               <tr key={o.id} className={o.status === 'CANCELLED' ? 'dim' : ''}>
                 <td>{fmtDateTime(o.deliveryAt)}</td>
                 <td>{o.customerName}</td>
-                <td>{o.items.map((it) => `${it.quantity}× ${it.menuItem.name}`).join(', ')}</td>
+                <td>{o.items.map((it) => (it.menuItem.batchSize > 1 ? `${it.quantity} ${it.menuItem.batchUnit} · ${it.menuItem.name}` : `${it.quantity}× ${it.menuItem.name}`)).join(', ')}</td>
                 <td><span className={`tag ${o.status}`}>{o.status.toLowerCase()}</span></td>
                 <td>{o.status === 'OPEN' && <button className="secondary" onClick={() => cancel(o.id)}>Cancel</button>}</td>
               </tr>

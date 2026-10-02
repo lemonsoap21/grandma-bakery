@@ -7,9 +7,11 @@ dotenv.config({ path: path.resolve(here, '../../.env') });
 
 export const config = {
   port: Number(process.env.PORT ?? 4000),
-  openPricesBaseUrl: process.env.OPEN_PRICES_BASE_URL ?? 'https://prices.openfoodfacts.org/api',
+  currency: 'CAD',
   supplierMode: process.env.SUPPLIER_MODE ?? 'mock',
-  safetyBufferHours: Number(process.env.ORDER_SAFETY_BUFFER_HOURS ?? 2),
+  safetyBufferHours: Number(process.env.ORDER_SAFETY_BUFFER_HOURS ?? 24),
   schedulerCron: process.env.SCHEDULER_CRON ?? '*/5 * * * *',
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
+  ingredientLookupModel: process.env.INGREDIENT_LOOKUP_MODEL ?? 'claude-haiku-4-5-20251001',
   bakeryAddress: process.env.BAKERY_DELIVERY_ADDRESS ?? '',
 };

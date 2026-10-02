@@ -24,7 +24,8 @@ export const api = {
 export const fmtDateTime = (value) =>
   new Date(value).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-export const fmtMoney = (value, currency = 'USD') =>
-  new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value);
+// The whole app works in one currency (see config.currency on the server).
+export const fmtMoney = (value) =>
+  new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 2 }).format(value);
 
 export const fmtQty = (value, unit) => `${Math.round(value * 100) / 100} ${unit}`;

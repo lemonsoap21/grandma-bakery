@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from './db.js';
 import { syncPlan } from './services/planner.js';
+import { DEFAULT_SHELF_LIFE_HOURS, lookupShelfLifeHours } from './services/ingredientInfo.js';
 import { refreshPrices, DEFAULT_FALLBACK_PRICE } from './services/pricing.js';
 
 export const router = Router();
@@ -21,9 +22,10 @@ router.get('/menu', wrap(async (_req, res) => {
 }));
 
 router.post('/menu', wrap(async (req, res) => {
-  const { name, instructions = '', prepMinutes, bakeMinutes, ingredients } = req.body ?? {};
+  const { name, instructions = '', batchSize = 1, batchUnit, prepMinutes, bakeMinutes, ingredients } = req.body ?? {};
   if (!name?.trim()) return bad(res, 'Name is required.');
   if (!(prepMinutes >= 0) || !(bakeMinutes >= 0)) return bad(res, 'Prep and bake times must be 0 or more minutes.');
+  if (!Number.isInteger(batchSize) || batchSize < 1) return bad(res, 'Batch size must be a whole number of 1 or more.');
   if (!Array.isArray(ingredients) || ingredients.length === 0) return bad(res, 'Add at least one ingredient.');
 
   const rows = [];
@@ -35,7 +37,16 @@ router.post('/menu', wrap(async (req, res) => {
     rows.push({ ...row, name: ingName });
   }
 
+  // Look up shelf life for brand-new ingredients before opening the transaction.
+  const known = new Set((await prisma.ingredient.findMany({ where: { name: { in: rows.map((r) => r.name) } } })).map((i) => i.name));
+  await Promise.all(
+    rows.filter((r) => !known.has(r.name) && !(r.shelfLifeHours > 0)).map(async (r) => {
+      r.shelfLifeHours = await lookupShelfLifeHours(r.name);
+    }),
+  );
+
   try {
+    const created = [];
     const item = await prisma.$transaction(async (tx) => {
       const recipe = [];
       for (const row of rows) {
@@ -43,11 +54,12 @@ router.post('/menu', wrap(async (req, res) => {
         if (ingredient && ingredient.unit !== row.unit) {
           throw Object.assign(new Error(`"${row.name}" is already tracked in ${ingredient.unit}, not ${row.unit}.`), { status: 400 });
         }
+        if (!ingredient) created.push(row.name);
         ingredient ??= await tx.ingredient.create({
           data: {
             name: row.name,
             unit: row.unit,
-            shelfLifeHours: row.shelfLifeHours > 0 ? Math.round(row.shelfLifeHours) : 168,
+            shelfLifeHours: row.shelfLifeHours > 0 ? Math.round(row.shelfLifeHours) : DEFAULT_SHELF_LIFE_HOURS,
             categoryTag: row.categoryTag?.trim() || null,
             fallbackPrice: DEFAULT_FALLBACK_PRICE[row.unit],
           },
@@ -58,6 +70,8 @@ router.post('/menu', wrap(async (req, res) => {
         data: {
           name: name.trim(),
           instructions,
+          batchSize,
+          batchUnit: batchUnit?.trim() || 'batch',
           prepMinutes: Math.round(prepMinutes),
           bakeMinutes: Math.round(bakeMinutes),
           ingredients: { create: recipe },
@@ -65,6 +79,9 @@ router.post('/menu', wrap(async (req, res) => {
         include: menuInclude,
       });
     });
+    // Look up prices for brand-new ingredients in the background; a web search takes a while.
+    const fresh = item.ingredients.map((r) => r.ingredient).filter((i) => created.includes(i.name));
+    for (const i of fresh) refreshPrices(i).catch((err) => console.warn(`[pricing] ${i.name}: ${err.message}`));
     res.status(201).json(item);
   } catch (err) {
     if (err.status === 400) return bad(res, err.message);
@@ -135,8 +152,10 @@ router.delete('/orders/:id', wrap(async (req, res) => {
 
 router.post('/prices/refresh', wrap(async (_req, res) => {
   const ingredients = await prisma.ingredient.findMany();
-  let live = 0;
-  for (const ingredient of ingredients) live += (await refreshPrices(ingredient)) > 0 ? 1 : 0;
+  const results = await Promise.all(
+    ingredients.map((i) => refreshPrices(i).catch((err) => (console.warn(`[pricing] ${i.name}: ${err.message}`), 0))),
+  );
+  const live = results.filter((n) => n > 0).length;
   await replan();
   res.json({ ingredients: ingredients.length, withLivePrices: live });
 }));

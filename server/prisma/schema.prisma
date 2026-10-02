@@ -24,6 +24,8 @@ model MenuItem {
   id           Int                @id @default(autoincrement())
   name         String             @unique
   instructions String             @default("")
+  batchSize    Int                @default(1) // pieces one run of the recipe makes; ingredient quantities are per run
+  batchUnit    String             @default("batch") // what a piece is called, e.g. "cookies"
   prepMinutes  Int
   bakeMinutes  Int
   ingredients  RecipeIngredient[]
@@ -74,7 +76,7 @@ model Price {
   ingredientId Int
   supplierId   Int
   pricePerUnit Float
-  currency     String     @default("USD")
+  currency     String     @default("CAD")
   source       String // open_prices | fallback
   observedAt   DateTime
   fetchedAt    DateTime   @default(now())

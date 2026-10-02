@@ -86,8 +86,8 @@ export default function Dashboard() {
                   <td>{n.name}</td>
                   <td>{fmtQty(n.totalQuantity, n.unit)}</td>
                   <td>{n.cheapest?.supplier ?? '—'}</td>
-                  <td>{n.cheapest ? `${fmtMoney(n.cheapest.pricePerUnit * (n.unit === 'each' ? 1 : 1000), n.cheapest.currency)} / ${n.unit === 'each' ? 'each' : n.unit === 'g' ? 'kg' : 'L'}` : '—'}</td>
-                  <td><span className={`tag ${n.cheapest?.source}`}>{n.cheapest?.source === 'open_prices' ? 'Open Prices' : 'Sample'}</span></td>
+                  <td>{n.cheapest ? `${fmtMoney(n.cheapest.pricePerUnit * (n.unit === 'each' ? 1 : 1000))} / ${n.unit === 'each' ? 'each' : n.unit === 'g' ? 'kg' : 'L'}` : '—'}</td>
+                  <td><span className={`tag ${n.cheapest?.source}`}>{n.cheapest?.source === 'web_search' ? 'Web search' : 'Sample'}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -109,7 +109,7 @@ export default function Dashboard() {
                   <td>{p.ingredient.name}</td>
                   <td>{fmtQty(p.quantity, p.ingredient.unit)}</td>
                   <td>{p.supplier.name}</td>
-                  <td>{fmtMoney(p.totalCost, p.currency)}</td>
+                  <td>{fmtMoney(p.totalCost)}</td>
                   <td>{fmtDateTime(p.arriveBy)}</td>
                   <td><span className={`tag ${p.status}`}>{p.status.toLowerCase()}</span></td>
                 </tr>

@@ -7,6 +7,9 @@ import { ensurePrices, cheapestSupplier } from './pricing.js';
  * Aggregate ingredient needs across all upcoming orders, compare prices and
  * work out when each purchase should be placed. Reads only; see syncPlan().
  */
+// Whole eggs etc. can't be bought in fractions.
+const purchasable = (unit, quantity) => (unit === 'each' ? Math.ceil(quantity - 1e-9) : quantity);
+
 export async function computePlan(now = new Date()) {
   const orders = await prisma.order.findMany({
     where: { status: 'OPEN', deliveryAt: { gt: now } },
@@ -33,7 +36,8 @@ export async function computePlan(now = new Date()) {
           orderId: order.id,
           customerName: order.customerName,
           itemName: menuItem.name,
-          quantity: item.quantity * ri.quantity,
+          // Orders are in pieces; the recipe quantity is for one batch of `batchSize` pieces.
+          quantity: (item.quantity * ri.quantity) / menuItem.batchSize,
           bakeStart,
           deadline: order.deliveryAt,
         });
@@ -54,7 +58,7 @@ export async function computePlan(now = new Date()) {
       ingredientId: ingredient.id,
       name: ingredient.name,
       unit: ingredient.unit,
-      totalQuantity: uses.reduce((sum, u) => sum + u.quantity, 0),
+      totalQuantity: purchasable(ingredient.unit, uses.reduce((sum, u) => sum + u.quantity, 0)),
       cheapest: best && {
         supplier: best.supplier.name,
         pricePerUnit: best.pricePerUnit,
@@ -95,7 +99,7 @@ export async function computePlan(now = new Date()) {
         continue;
       }
 
-      const quantity = group.reduce((sum, u) => sum + u.quantity, 0);
+      const quantity = purchasable(ingredient.unit, group.reduce((sum, u) => sum + u.quantity, 0));
       planned.push({
         ingredientId: ingredient.id,
         supplierId: best.supplierId,
