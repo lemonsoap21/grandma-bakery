@@ -1,9 +1,10 @@
 import { config } from '../config.js';
 
 /**
- * Ask Claude a question it may answer using web search, and return the last JSON object in its
- * reply that has `key` (e.g. "days" or "prices"). Returns null when no API key is configured;
- * throws when the request fails or the reply has no such JSON.
+ * Ask Claude a question it may answer using web search. Returns `{ answer, sourceUrls }`: the last
+ * JSON object in its reply that has `key` (e.g. "days" or "prices"), and the set of page URLs the
+ * searches actually returned. Returns null when no API key is configured; throws when the request
+ * fails or the reply has no such JSON.
  */
 export async function askWithWebSearch({ system, prompt, key, maxSearches = 2, maxTokens = 1024, timeoutMs = 30000 }) {
   if (!config.anthropicApiKey) return null;
@@ -34,9 +35,16 @@ export async function askWithWebSearch({ system, prompt, key, maxSearches = 2, m
   const json = await res.json();
   // The reply mixes search blocks and text; the answer is the last JSON object in the text.
   const text = (json.content ?? []).filter((b) => b.type === 'text').map((b) => b.text).join('');
-  const found = lastJsonWithKey(text, key);
-  if (!found) throw new Error(`no JSON with "${key}" in reply: ${JSON.stringify(text.slice(0, 300))}`);
-  return found;
+  const answer = lastJsonWithKey(text, key);
+  if (!answer) throw new Error(`no JSON with "${key}" in reply: ${JSON.stringify(text.slice(0, 300))}`);
+  const sourceUrls = new Set();
+  for (const block of json.content ?? []) {
+    if (block.type === 'web_search_tool_result' && Array.isArray(block.content)) {
+      for (const result of block.content) if (result.url) sourceUrls.add(result.url);
+    }
+    for (const citation of block.citations ?? []) if (citation.url) sourceUrls.add(citation.url);
+  }
+  return { answer, sourceUrls };
 }
 
 function lastJsonWithKey(text, key) {

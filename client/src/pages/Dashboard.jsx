@@ -79,7 +79,7 @@ export default function Dashboard() {
           <p className="muted">Nothing to source yet.</p>
         ) : (
           <table>
-            <thead><tr><th>Ingredient</th><th>Total needed</th><th>Cheapest store</th><th>Price</th><th>Source</th></tr></thead>
+            <thead><tr><th>Ingredient</th><th>Total needed</th><th>Cheapest store</th><th>Price</th><th>Check price</th><th>Source</th></tr></thead>
             <tbody>
               {needs.map((n) => (
                 <tr key={n.ingredientId}>
@@ -87,6 +87,15 @@ export default function Dashboard() {
                   <td>{fmtQty(n.totalQuantity, n.unit)}</td>
                   <td>{n.cheapest?.supplier ?? '—'}</td>
                   <td>{n.cheapest ? `${fmtMoney(n.cheapest.pricePerUnit * (n.unit === 'each' ? 1 : 1000))} / ${n.unit === 'each' ? 'each' : n.unit === 'g' ? 'kg' : 'L'}` : '—'}</td>
+                  <td>
+                    {n.cheapest?.url ? (
+                      <a href={n.cheapest.url} target="_blank" rel="noopener noreferrer" title={n.cheapest.url}>
+                        {n.cheapest.packageInfo ?? 'View listing'} ↗
+                      </a>
+                    ) : (
+                      <span className="muted">{n.cheapest?.packageInfo ?? '—'}</span>
+                    )}
+                  </td>
                   <td><span className={`tag ${n.cheapest?.source}`}>{n.cheapest?.source === 'web_search' ? 'Web search' : 'Sample'}</span></td>
                 </tr>
               ))}

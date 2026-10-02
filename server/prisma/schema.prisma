@@ -77,7 +77,9 @@ model Price {
   supplierId   Int
   pricePerUnit Float
   currency     String     @default("CAD")
-  source       String // open_prices | fallback
+  source       String // web_search | fallback
+  url          String? // page the price was found on (web_search only)
+  packageInfo  String? // what was priced, e.g. "Five Roses All Purpose Flour, 2.5 kg for $4.47"
   observedAt   DateTime
   fetchedAt    DateTime   @default(now())
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])

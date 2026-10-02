@@ -10,7 +10,7 @@ const MAX_SHELF_LIFE_HOURS = 24 * 365 * 3;
  */
 export async function lookupShelfLifeHours(name) {
   try {
-    const info = await askWithWebSearch({
+    const reply = await askWithWebSearch({
       key: 'days',
       system:
         'You give typical shelf lives of raw baking ingredients as bought from a store, ' +
@@ -18,7 +18,7 @@ export async function lookupShelfLifeHours(name) {
         'Search the web if needed, then finish with only JSON: {"days": <number>}. Use a conservative typical value.',
       prompt: `Ingredient: ${name}`,
     });
-    const days = Number(info?.days);
+    const days = Number(reply?.answer.days);
     return days > 0 ? Math.min(Math.round(days * 24), MAX_SHELF_LIFE_HOURS) : null;
   } catch (err) {
     console.warn(`[ingredient-info] lookup failed for "${name}":`, err.message);

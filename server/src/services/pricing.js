@@ -28,6 +28,29 @@ export function pricePerBaseUnit({ price, size, sizeUnit }, unit) {
   return factor && price > 0 && size > 0 ? price / (size * factor) : null;
 }
 
+// URL paths that mark a single product's page on the stores' own sites, e.g. walmart.ca/en/ip/...,
+// nofrills.ca/.../p/20160571_EA, costco.ca/...product.100123.html, voila.ca/products/...
+const PRODUCT_PATH = /\/(ip|p|products?)\/[^/]+|\.product\.\d+\.html$/i;
+// Aggregators and deal sites list prices but aren't where you'd buy.
+const NOT_A_STORE = /(^|\.)(redflagdeals|flipp|reebee|salewhale|smartcanucks|google|amazon)\./i;
+
+/** True for a link to one specific product on a store's website (not a category, flyer or deal page). */
+export function isProductPage(url) {
+  try {
+    const { hostname, pathname } = new URL(url);
+    return !NOT_A_STORE.test(hostname) && PRODUCT_PATH.test(pathname);
+  } catch {
+    return false;
+  }
+}
+
+/** e.g. "Five Roses All Purpose Flour, 2.5 kg for $4.47", or null if the reply is incomplete. */
+function describePackage({ product, price, size, size_unit: sizeUnit }) {
+  if (!(Number(price) > 0) || !(Number(size) > 0) || !sizeUnit) return null;
+  const pkg = `${size} ${sizeUnit} for $${Number(price).toFixed(2)}`;
+  return product ? `${String(product).trim()}, ${pkg}` : pkg;
+}
+
 /** Ask Claude to search current Canadian grocery prices for one ingredient. */
 async function searchPrices(ingredient) {
   // Ignore the .env.example placeholder so the model doesn't stop to ask where the bakery is.
@@ -36,25 +59,32 @@ async function searchPrices(ingredient) {
   const sizeUnits = ingredient.unit === 'each' ? '"item"' : '"g", "kg", "ml" or "L"';
   const reply = await askWithWebSearch({
     key: 'prices',
-    maxSearches: 3,
+    maxSearches: 5,
     maxTokens: 2048,
     timeoutMs: 60000,
     system:
       `You find current regular shelf prices for raw baking ingredients at grocery stores in Canada${near}, ` +
       `in ${config.currency}. Search store websites or flyers (e.g. Walmart, Real Canadian Superstore, No Frills, Costco, Metro, Sobeys). ` +
       `For each store, report one common package exactly as listed: its price and its size. Do not do any unit conversions. ` +
+      `Every price must come from that specific product's own page on the store's website (e.g. walmart.ca/en/ip/..., ` +
+      `nofrills.ca/.../p/..., metro.ca/.../p/...), not from a category or search page, a flyer, or a deal site. ` +
       `Only include prices you actually found, at most 5 stores. Never ask questions: if the location is vague, use national chain prices. ` +
       `Finish with only JSON: {"prices": [{"store": "<store name>", "product": "<product name>", "price": <package price>, ` +
-      `"size": <number>, "size_unit": ${sizeUnits}}]}.`,
+      `"size": <number>, "size_unit": ${sizeUnits}, "url": "<that product page>"}]}.`,
     prompt: `Ingredient: ${ingredient.name}`,
   });
   if (!reply) return [];
-  const found = (Array.isArray(reply.prices) ? reply.prices : [])
+  const { answer, sourceUrls } = reply;
+  const found = (Array.isArray(answer.prices) ? answer.prices : [])
     .map((p) => ({
       store: String(p.store ?? '').trim(),
       pricePerUnit: pricePerBaseUnit({ price: Number(p.price), size: Number(p.size), sizeUnit: p.size_unit }, ingredient.unit),
+      // Only keep links the search actually returned, so we never show a made-up URL.
+      url: sourceUrls.has(p.url) ? p.url : null,
+      package: describePackage(p),
     }))
-    .filter((p) => p.store && p.pricePerUnit);
+    // Every web price must link to the exact product, so it can be checked in one click.
+    .filter((p) => p.store && p.pricePerUnit && isProductPage(p.url));
   return dropLowOutliers(found);
 }
 
@@ -79,8 +109,8 @@ function simulatedLeadTime(key) {
 
 const storeKey = (name) => `web:${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
 
-async function upsertPrice({ ingredientId, supplierId, pricePerUnit, source }) {
-  const data = { pricePerUnit, currency: config.currency, source, observedAt: new Date(), fetchedAt: new Date() };
+async function upsertPrice({ ingredientId, supplierId, pricePerUnit, source, url = null, packageInfo = null }) {
+  const data = { pricePerUnit, currency: config.currency, source, url, packageInfo, observedAt: new Date(), fetchedAt: new Date() };
   await prisma.price.upsert({
     where: { ingredientId_supplierId: { ingredientId, supplierId } },
     update: data,
@@ -92,7 +122,7 @@ async function upsertPrice({ ingredientId, supplierId, pricePerUnit, source }) {
 async function saveWebPrices(ingredient, found) {
   const supplierIds = [];
   // Cheapest first, so a store listed twice (e.g. two package sizes) keeps its best price.
-  for (const { store, pricePerUnit } of [...found].sort((a, b) => a.pricePerUnit - b.pricePerUnit)) {
+  for (const { store, pricePerUnit, url, package: packageInfo } of [...found].sort((a, b) => a.pricePerUnit - b.pricePerUnit)) {
     const key = storeKey(store);
     if (key === 'web:') continue;
     const supplier = await prisma.supplier.upsert({
@@ -101,7 +131,7 @@ async function saveWebPrices(ingredient, found) {
       create: { key, name: store, leadTimeHours: simulatedLeadTime(key) },
     });
     if (supplierIds.includes(supplier.id)) continue;
-    await upsertPrice({ ingredientId: ingredient.id, supplierId: supplier.id, pricePerUnit, source: 'web_search' });
+    await upsertPrice({ ingredientId: ingredient.id, supplierId: supplier.id, pricePerUnit, source: 'web_search', url, packageInfo });
     supplierIds.push(supplier.id);
   }
   return supplierIds;

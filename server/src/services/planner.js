@@ -64,6 +64,8 @@ export async function computePlan(now = new Date()) {
         pricePerUnit: best.pricePerUnit,
         currency: best.currency,
         source: best.source,
+        url: best.url,
+        packageInfo: best.packageInfo,
       },
     });
 
