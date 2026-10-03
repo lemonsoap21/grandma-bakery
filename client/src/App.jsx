@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Menu from './pages/Menu.jsx';
 import Orders from './pages/Orders.jsx';
 import ChatBox from './components/ChatBox.jsx';
+import BackgroundMusic from './components/BackgroundMusic.jsx';
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
           <NavLink to="/orders">Orders</NavLink>
           <NavLink to="/menu">Recipes</NavLink>
         </nav>
+        <BackgroundMusic />
       </header>
       <main>
         <Routes>
@@ -26,6 +28,11 @@ export default function App() {
       <ChatBox />
       <footer className="footer">
         Made with all my love, just for you{' '}<span className="heart">♥</span>{' '}Daniel
+        <p className="credit">
+          Music: “Canon in D Major” by{' '}
+          <a href="https://incompetech.com" target="_blank" rel="noopener noreferrer">Kevin MacLeod</a>, licensed under{' '}
+          <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener noreferrer">CC BY 3.0</a>
+        </p>
       </footer>
     </>
   );
