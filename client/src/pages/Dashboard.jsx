@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, fmtDateTime, fmtMoney, fmtQty } from '../api.js';
+import { useDataChanged } from '../dataEvents.js';
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -18,6 +19,7 @@ export default function Dashboard() {
   useEffect(() => {
     load();
   }, [load]);
+  useDataChanged(load);
 
   async function refreshPrices() {
     setBusy(true);

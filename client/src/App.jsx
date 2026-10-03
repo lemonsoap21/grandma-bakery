@@ -2,6 +2,7 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import Dashboard from './pages/Dashboard.jsx';
 import Menu from './pages/Menu.jsx';
 import Orders from './pages/Orders.jsx';
+import ChatBox from './components/ChatBox.jsx';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/menu" element={<Menu />} />
         </Routes>
       </main>
+      <ChatBox />
     </>
   );
 }

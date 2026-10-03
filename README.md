@@ -39,6 +39,7 @@ Small bakeries spend hours every week manually figuring out what ingredients the
 | 💲 **Price Comparison** | Looks up current Canadian grocery prices with Claude web search and finds the cheapest store for each ingredient. |
 | 🤖 **Automated Purchasing** | Places ingredient orders with the cheapest supplier(s) for delivery to the bakery (simulated in this version). |
 | ⏱️ **Smart Order Timing** | Balances shelf life, delivery lead time, and prep/bake time to pick the right moment to order. |
+| 💬 **Chat** | Add, cancel and look up orders in plain words ("add an order of 4 muffins for Sarah tomorrow at 2pm"). Runs in the browser with no AI service, so it's free. |
 
 ---
 
@@ -212,6 +213,24 @@ Go to the **Orders** page and click **New Order**. Select menu items, enter quan
 The **Dashboard** shows your production schedule, aggregated ingredient needs, the cheapest store for each ingredient, when each purchase is scheduled, and any timing conflicts.
 
 ![Dashboard](./screenshots/dashboard.png)
+
+### 4. Use the Chat
+Click **💬 Ask Daniel** in the bottom-right corner and type what you want done, or press 🎤 and say it. If something is missing, Daniel asks for it, and the page you're on updates as soon as a change is made.
+
+Daniel answers the way grandma's husband would, and reads each reply aloud in a deep, unhurried voice (turn it off with **🔊 Voice on** in the chat header). Reading aloud uses the browser's built-in text-to-speech, also free: it picks a male voice when one is installed (macOS even has one called "Daniel") and lowers the pitch.
+
+Talking uses the browser's built-in speech recognition, which is free. It works in Chrome, Edge and Safari (not Firefox, where the 🎤 button is hidden), needs microphone permission, and only runs on `localhost` or HTTPS. Chrome sends the audio to Google to turn it into text, so it needs an internet connection.
+
+| Say | What happens |
+|---|---|
+| "Add an order of 4 muffins for Sarah tomorrow at 2pm" | Places the order (asks which muffins if there's more than one kind) |
+| "Add 2 dozen cookies and 3 croissants" | Asks who it's for and when, then places it |
+| "Undo" | Cancels the order the chat just added |
+| "Cancel Sarah's order" / "Cancel order 5" | Asks you to confirm, then cancels it |
+| "What's due tomorrow?" / "Show orders" | Lists upcoming orders |
+| "Show the menu" / "Help" | Lists menu items / everything the chat understands |
+
+The chat understands a fixed set of phrasings (it lives in `client/src/assistant/`) rather than calling an AI model, so it costs nothing and works without an API key. It can't edit the menu or change an existing order; cancel and re-add instead.
 
 ---
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, fmtQty } from '../api.js';
+import { useDataChanged } from '../dataEvents.js';
 
 const blankRow = () => ({ name: '', quantity: '', unit: 'g' });
 const blankForm = () => ({ name: '', instructions: '', batchSize: '1', batchUnit: '', prepMinutes: '', bakeMinutes: '', ingredients: [blankRow()] });
@@ -11,6 +12,7 @@ export default function Menu() {
 
   const load = () => api.menu().then(setItems).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
+  useDataChanged(load);
 
   const setRow = (i, patch) =>
     setForm((f) => ({ ...f, ingredients: f.ingredients.map((r, j) => (j === i ? { ...r, ...patch } : r)) }));
