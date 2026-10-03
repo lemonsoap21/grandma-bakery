@@ -11,8 +11,9 @@ export default function CartRuns({ runs, onChange, onError }) {
     <>
       <section>
         <h2>Carts ready for checkout</h2>
+        <p className="section-note">The agent fills each store's cart when its order time comes. You check out.</p>
         {active.length === 0 ? (
-          <p className="muted">No carts waiting. The agent fills a store's cart when its order time comes.</p>
+          <p className="empty">No carts waiting right now.</p>
         ) : (
           <div className="grid">
             {active.map((run) => <CartCard key={run.id} run={run} onChange={onChange} onError={onError} />)}
@@ -23,6 +24,7 @@ export default function CartRuns({ runs, onChange, onError }) {
       {ordered.length > 0 && (
         <section>
           <h2>Orders placed</h2>
+          <div className="table-wrap">
           <table>
             <thead><tr><th>Ordered</th><th>Store</th><th>Items</th><th>Total</th><th>Confirmation #</th><th>Arrives by</th></tr></thead>
             <tbody>
@@ -38,6 +40,7 @@ export default function CartRuns({ runs, onChange, onError }) {
               ))}
             </tbody>
           </table>
+          </div>
         </section>
       )}
     </>
