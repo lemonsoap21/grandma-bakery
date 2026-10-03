@@ -10,17 +10,23 @@ const STORAGE_KEY = 'daniel:voice';
 const MALE_VOICES = [
   /\bdaniel\b/i, /\barthur\b/i, /\bgordon\b/i, /\bralph\b/i, /\bfred\b/i, /\baaron\b/i, /\balex\b/i,
   /\bgoogle uk english male\b/i, /\bmicrosoft (?:george|guy|mark|david|ryan|christopher|eric|roger|steffan)\b/i,
-  /\btom\b/i, /\boliver\b/i, /\bthomas\b/i, /\bmale\b/i,
+  /\btom\b/i, /\boliver\b/i, /\bthomas\b/i, /\bgrandpa\b/i, /\beddy\b/i, /\breed\b/i, /\brocko\b/i,
+  /\bmale\b/i,
 ];
 
-function pickVoice(voices) {
+// Never fall back to these: they're the female voices browsers and operating systems ship.
+const FEMALE_VOICES =
+  /female|samantha|karen|moira|tessa|victoria|fiona|kathy|shelley|flo\b|sandy|grandma|zira|hazel|susan|aria|jenny|libby|sonia|serena|allison|ava|nicky|google us english/i;
+
+export function pickVoice(voices) {
   const english = voices.filter((v) => v.lang?.toLowerCase().startsWith('en'));
   const pool = english.length ? english : voices;
   for (const pattern of MALE_VOICES) {
     const voice = pool.find((v) => pattern.test(v.name) && !/female/i.test(v.name));
     if (voice) return { voice, male: true };
   }
-  return { voice: pool.find((v) => v.default) ?? pool[0] ?? null, male: false };
+  const notFemale = pool.filter((v) => !FEMALE_VOICES.test(v.name));
+  return { voice: notFemale.find((v) => v.default) ?? notFemale[0] ?? null, male: false };
 }
 
 // Dates are shown short ("Sat, Oct 3"); say them in full so they don't come out as "sat, oct".
@@ -55,12 +61,20 @@ export function useSpeechOutput() {
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const chosen = useRef({ voice: null, male: false });
+  // Text asked to be spoken before the browser had loaded its voices (e.g. the greeting).
+  const waiting = useRef([]);
+  const speakRef = useRef(() => {});
 
   useEffect(() => {
     if (!synth) return undefined;
-    // Voices load asynchronously in Chrome, so pick again once they arrive.
+    // Voices load asynchronously in Chrome, so pick again once they arrive, then say anything
+    // that was held back so it isn't read in the browser's default (often female) voice.
     const load = () => {
-      chosen.current = pickVoice(synth.getVoices());
+      const voices = synth.getVoices();
+      if (voices.length === 0) return;
+      chosen.current = pickVoice(voices);
+      const held = waiting.current.splice(0);
+      for (const text of held) speakRef.current(text);
     };
     load();
     synth.addEventListener?.('voiceschanged', load);
@@ -70,10 +84,20 @@ export function useSpeechOutput() {
     };
   }, []);
 
-  const stop = useCallback(() => synth?.cancel(), []);
+  const stop = useCallback(() => {
+    waiting.current = [];
+    synth?.cancel();
+  }, []);
 
   const speak = useCallback((text) => {
     if (!synth || !enabledRef.current) return;
+    if (!chosen.current.voice) {
+      if (synth.getVoices().length === 0) {
+        waiting.current = [text]; // speak once voices load; only the latest message matters
+        return;
+      }
+      chosen.current = pickVoice(synth.getVoices());
+    }
     if (synth.speaking || synth.pending) synth.cancel(); // don't talk over himself
     const { voice, male } = chosen.current;
     // One utterance per line: Chrome cuts off long utterances, and the pauses sound natural.
@@ -88,6 +112,7 @@ export function useSpeechOutput() {
       synth.speak(utterance);
     }
   }, []);
+  speakRef.current = speak;
 
   const toggle = () => {
     const next = !enabled;
