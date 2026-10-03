@@ -10,17 +10,20 @@
     "db:migrate": "dotenv -e ../.env -- prisma migrate dev",
     "db:deploy": "dotenv -e ../.env -- prisma migrate deploy",
     "db:seed": "dotenv -e ../.env -- prisma db seed",
+    "agent:login": "node src/agent/login.js",
     "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@prisma/client": "5.22.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "playwright": "^1.63.0"
   },
   "devDependencies": {
     "dotenv-cli": "^7.4.2",

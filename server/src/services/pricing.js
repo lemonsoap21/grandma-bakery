@@ -22,10 +22,16 @@ const SIZE_IN_BASE = {
   each: { item: 1, each: 1 },
 };
 
+/** Package size in the ingredient's base unit (e.g. 2.5 kg → 2500 g); null if the units don't match. */
+export function packageSizeInBase({ size, sizeUnit }, unit) {
+  const factor = SIZE_IN_BASE[unit]?.[String(sizeUnit).toLowerCase()];
+  return factor && size > 0 ? size * factor : null;
+}
+
 /** Package price ÷ package size, in the ingredient's base unit; null if the units don't match. */
 export function pricePerBaseUnit({ price, size, sizeUnit }, unit) {
-  const factor = SIZE_IN_BASE[unit]?.[String(sizeUnit).toLowerCase()];
-  return factor && price > 0 && size > 0 ? price / (size * factor) : null;
+  const base = packageSizeInBase({ size, sizeUnit }, unit);
+  return base && price > 0 ? price / base : null;
 }
 
 // URL paths that mark a single product's page on the stores' own sites, e.g. walmart.ca/en/ip/...,
@@ -82,6 +88,8 @@ async function searchPrices(ingredient) {
       // Only keep links the search actually returned, so we never show a made-up URL.
       url: sourceUrls.has(p.url) ? p.url : null,
       package: describePackage(p),
+      packageSize: packageSizeInBase({ size: Number(p.size), sizeUnit: p.size_unit }, ingredient.unit),
+      packagePrice: Number(p.price),
     }))
     // Every web price must link to the exact product, so it can be checked in one click.
     .filter((p) => p.store && p.pricePerUnit && isProductPage(p.url));
@@ -109,8 +117,11 @@ function simulatedLeadTime(key) {
 
 const storeKey = (name) => `web:${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
 
-async function upsertPrice({ ingredientId, supplierId, pricePerUnit, source, url = null, packageInfo = null }) {
-  const data = { pricePerUnit, currency: config.currency, source, url, packageInfo, observedAt: new Date(), fetchedAt: new Date() };
+async function upsertPrice({ ingredientId, supplierId, pricePerUnit, source, url = null, packageInfo = null, packageSize = null, packagePrice = null }) {
+  const data = {
+    pricePerUnit, currency: config.currency, source, url, packageInfo, packageSize, packagePrice,
+    observedAt: new Date(), fetchedAt: new Date(),
+  };
   await prisma.price.upsert({
     where: { ingredientId_supplierId: { ingredientId, supplierId } },
     update: data,
@@ -122,7 +133,7 @@ async function upsertPrice({ ingredientId, supplierId, pricePerUnit, source, url
 async function saveWebPrices(ingredient, found) {
   const supplierIds = [];
   // Cheapest first, so a store listed twice (e.g. two package sizes) keeps its best price.
-  for (const { store, pricePerUnit, url, package: packageInfo } of [...found].sort((a, b) => a.pricePerUnit - b.pricePerUnit)) {
+  for (const { store, pricePerUnit, url, package: packageInfo, packageSize, packagePrice } of [...found].sort((a, b) => a.pricePerUnit - b.pricePerUnit)) {
     const key = storeKey(store);
     if (key === 'web:') continue;
     const supplier = await prisma.supplier.upsert({
@@ -131,7 +142,10 @@ async function saveWebPrices(ingredient, found) {
       create: { key, name: store, leadTimeHours: simulatedLeadTime(key) },
     });
     if (supplierIds.includes(supplier.id)) continue;
-    await upsertPrice({ ingredientId: ingredient.id, supplierId: supplier.id, pricePerUnit, source: 'web_search', url, packageInfo });
+    await upsertPrice({
+      ingredientId: ingredient.id, supplierId: supplier.id, pricePerUnit, source: 'web_search',
+      url, packageInfo, packageSize, packagePrice,
+    });
     supplierIds.push(supplier.id);
   }
   return supplierIds;
@@ -179,13 +193,17 @@ export async function refreshPrices(ingredient) {
   return live;
 }
 
-/** Refresh prices only when nothing is cached or the cache is stale. */
+/**
+ * Refresh prices only when nothing is cached, the cache is stale, or the cached web prices predate
+ * package sizes (needed to know how many packages to buy).
+ */
 export async function ensurePrices(ingredient) {
   const newest = await prisma.price.findFirst({
     where: { ingredientId: ingredient.id, currency: config.currency },
     orderBy: { fetchedAt: 'desc' },
   });
-  if (!newest || Date.now() - newest.fetchedAt.getTime() > STALE_MS) {
+  const missingPackage = newest?.source === 'web_search' && newest.packageSize == null;
+  if (!newest || missingPackage || Date.now() - newest.fetchedAt.getTime() > STALE_MS) {
     await refreshPrices(ingredient);
   }
 }

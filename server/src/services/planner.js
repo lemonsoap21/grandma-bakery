@@ -7,6 +7,10 @@ import { ensurePrices, cheapestSupplier } from './pricing.js';
  * Aggregate ingredient needs across all upcoming orders, compare prices and
  * work out when each purchase should be placed. Reads only; see syncPlan().
  */
+// Purchases past SCHEDULED: a cart agent has them, or they're ordered/delivered. A failed cart
+// stays covered until the baker retries or dismisses it, so it isn't retried every few minutes.
+export const IN_PROGRESS = ['PREPARING', 'CART_READY', 'CART_FAILED', 'PLACED', 'DELIVERED'];
+
 // Whole eggs etc. can't be bought in fractions.
 const purchasable = (unit, quantity) => (unit === 'each' ? Math.ceil(quantity - 1e-9) : quantity);
 
@@ -16,9 +20,9 @@ export async function computePlan(now = new Date()) {
     include: { items: { include: { menuItem: { include: { ingredients: { include: { ingredient: true } } } } } } },
   });
 
-  // Order items already covered by a placed or delivered purchase aren't re-planned.
+  // Order items already being bought (cart filled, ordered or delivered) aren't re-planned.
   const done = await prisma.purchase.findMany({
-    where: { status: { in: ['PLACED', 'DELIVERED'] } },
+    where: { status: { in: IN_PROGRESS } },
     select: { ingredientId: true, orderItemIds: true },
   });
   const covered = new Set(done.flatMap((p) => p.orderItemIds.map((id) => `${p.ingredientId}:${id}`)));
@@ -102,12 +106,17 @@ export async function computePlan(now = new Date()) {
       }
 
       const quantity = purchasable(ingredient.unit, group.reduce((sum, u) => sum + u.quantity, 0));
+      // Stores sell whole packages, so buy enough of them and cost what's actually paid.
+      const packages = best.packageSize > 0 ? Math.ceil(quantity / best.packageSize - 1e-9) : null;
       planned.push({
         ingredientId: ingredient.id,
         supplierId: best.supplierId,
         quantity,
         unitPrice: best.pricePerUnit,
-        totalCost: quantity * best.pricePerUnit,
+        totalCost: packages && best.packagePrice > 0 ? packages * best.packagePrice : quantity * best.pricePerUnit,
+        productUrl: best.url,
+        packageInfo: best.packageInfo,
+        packages,
         currency: best.currency,
         orderAt: window.orderAt,
         arriveBy: window.arriveBy,

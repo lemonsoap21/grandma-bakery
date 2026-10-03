@@ -26,6 +26,7 @@ export function getAdapter() {
   switch (config.supplierMode) {
     case 'mock':
       return new MockSupplierAdapter();
+    // "browser" mode doesn't place orders itself: see agent/carts.js.
     default:
       throw new Error(`Unknown SUPPLIER_MODE "${config.supplierMode}"`);
   }

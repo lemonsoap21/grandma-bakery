@@ -4,14 +4,21 @@ import dotenv from 'dotenv';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(here, '../../.env') });
+const serverDir = path.resolve(here, '..');
 
 export const config = {
   port: Number(process.env.PORT ?? 4000),
   currency: 'CAD',
+  // "mock" simulates ordering; "browser" has the cart agent fill real store carts for the baker to check out.
   supplierMode: process.env.SUPPLIER_MODE ?? 'mock',
   safetyBufferHours: Number(process.env.ORDER_SAFETY_BUFFER_HOURS ?? 24),
   schedulerCron: process.env.SCHEDULER_CRON ?? '*/5 * * * *',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
   ingredientLookupModel: process.env.INGREDIENT_LOOKUP_MODEL ?? 'claude-haiku-4-5-20251001',
   bakeryAddress: process.env.BAKERY_DELIVERY_ADDRESS ?? '',
+  cartAgentModel: process.env.CART_AGENT_MODEL ?? 'claude-opus-5-5',
+  // Store sites block hidden browsers more often, so the agent's window is visible by default.
+  agentHeadless: process.env.AGENT_HEADLESS === 'true',
+  agentProfileDir: path.join(serverDir, '.agent-browser'),
+  agentScreenshotDir: path.join(serverDir, 'agent-screenshots'),
 };
