@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, fmtDateTime, fmtMoney, fmtQty } from '../api.js';
+import CartRuns from './CartRuns.jsx';
 
 function greeting() {
   const h = new Date().getHours();
@@ -38,10 +39,29 @@ export default function Dashboard() {
     }
   }
 
+  async function fillCartsNow() {
+    try {
+      setError('');
+      await api.fillCartsNow();
+      // The agent works in the background; check back for its progress.
+      setTimeout(load, 3000);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  // Reload while a cart is being filled, so its result shows up on its own.
+  const filling = data?.cartRuns.some((r) => r.status === 'RUNNING');
+  useEffect(() => {
+    if (!filling) return undefined;
+    const timer = setInterval(load, 5000);
+    return () => clearInterval(timer);
+  }, [filling, load]);
+
   if (error && !data) return <p className="alert error">{error}</p>;
   if (!data) return <p className="empty">Planning your week with love…</p>;
 
-  const { schedule, needs, purchases, conflicts } = data;
+  const { schedule, needs, purchases, conflicts, cartRuns, supplierMode } = data;
 
   return (
     <>
@@ -53,6 +73,9 @@ export default function Dashboard() {
         <span />
         <div className="row">
           <button className="secondary" onClick={load}>Refresh</button>
+          {supplierMode === 'browser' && (
+            <button className="secondary" onClick={fillCartsNow} disabled={filling}>{filling ? 'Filling carts…' : 'Fill carts now'}</button>
+          )}
           <button onClick={refreshPrices} disabled={busy}>{busy ? 'Finding the best prices for you…' : 'Update prices ♡'}</button>
         </div>
       </div>
@@ -64,6 +87,8 @@ export default function Dashboard() {
           <ul>{conflicts.map((c, i) => <li key={i}>{c.message}</li>)}</ul>
         </section>
       )}
+
+      {supplierMode === 'browser' && <CartRuns runs={cartRuns} onChange={load} onError={setError} />}
 
       <section>
         <h2>What we're baking</h2>
@@ -135,11 +160,14 @@ export default function Dashboard() {
                   <tr key={p.id}>
                     <td>{fmtDateTime(p.orderAt)}</td>
                     <td>{p.ingredient.name}</td>
-                    <td>{fmtQty(p.quantity, p.ingredient.unit)}</td>
+                    <td>
+                      {fmtQty(p.quantity, p.ingredient.unit)}
+                      {p.packages ? <span className="muted"> · {p.packages} pkg</span> : null}
+                    </td>
                     <td>{p.supplier.name}</td>
                     <td>{fmtMoney(p.totalCost)}</td>
                     <td>{fmtDateTime(p.arriveBy)}</td>
-                    <td><span className={`tag ${p.status}`}>{p.status.toLowerCase()}</span></td>
+                    <td><span className={`tag ${p.status}`}>{p.status.toLowerCase().replace('_', ' ')}</span></td>
                   </tr>
                 ))}
               </tbody>

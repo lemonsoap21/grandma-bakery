@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { prisma } from './db.js';
 import { syncPlan } from './services/planner.js';
+import { config } from './config.js';
+import { fillDueCarts, markOrdered, retryRun } from './agent/carts.js';
 import { DEFAULT_SHELF_LIFE_HOURS, lookupShelfLifeHours } from './services/ingredientInfo.js';
 import { refreshPrices, DEFAULT_FALLBACK_PRICE } from './services/pricing.js';
 
@@ -180,7 +182,40 @@ router.get('/dashboard', wrap(async (_req, res) => {
     )
     .sort((a, b) => a.bakeStart - b.bakeStart);
 
-  res.json({ schedule, needs, purchases, conflicts });
+  const cartRuns = await prisma.cartRun.findMany({
+    where: { status: { not: 'DISMISSED' } },
+    include: { supplier: true, purchases: { include: { ingredient: true } } },
+    orderBy: { startedAt: 'desc' },
+    take: 30,
+  });
+
+  res.json({ schedule, needs, purchases, conflicts, cartRuns, supplierMode: config.supplierMode });
+}));
+
+// ---- Cart agent ----------------------------------------------------------
+
+// Fill carts for every scheduled purchase now, without waiting for its order time.
+router.post('/cart-runs/fill-now', wrap(async (_req, res) => {
+  if (config.supplierMode !== 'browser') return bad(res, 'Set SUPPLIER_MODE=browser in .env to use the cart agent.');
+  fillDueCarts({ all: true })
+    .then((runs) => runs === null && console.log('[cart-agent] already running; fill-now skipped'))
+    .catch((err) => console.error('[cart-agent] fill-now failed:', err));
+  res.status(202).json({ started: true });
+}));
+
+router.post('/cart-runs/:id/ordered', wrap(async (req, res) => {
+  const { confirmationId = '', total } = req.body ?? {};
+  const ok = await markOrdered(Number(req.params.id), { confirmationId: String(confirmationId), total: Number(total) });
+  if (!ok) return res.status(404).json({ error: 'Cart run not found.' });
+  res.status(204).end();
+}));
+
+router.post('/cart-runs/:id/retry', wrap(async (req, res) => {
+  const ok = await retryRun(Number(req.params.id));
+  if (ok === null) return res.status(404).json({ error: 'Cart run not found.' });
+  if (ok === false) return bad(res, 'Only ready or failed carts can be retried.');
+  await replan();
+  res.status(204).end();
 }));
 
 router.get('/health', (_req, res) => res.json({ ok: true }));

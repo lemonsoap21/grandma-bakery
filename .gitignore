@@ -4,3 +4,6 @@ dist
 .DS_Store
 *.log
 .claude/settings.local.json
+# Cart agent: the browser profile holds your store sign-ins
+server/.agent-browser
+server/agent-screenshots

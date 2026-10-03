@@ -18,7 +18,8 @@
     "build": "npm run build -w client",
     "test": "npm test -w server",
     "db:migrate": "npm run db:migrate -w server",
-    "db:seed": "npm run db:seed -w server"
+    "db:seed": "npm run db:seed -w server",
+    "agent:login": "npm run agent:login -w server"
   },
   "devDependencies": {
     "concurrently": "10.0.5"
