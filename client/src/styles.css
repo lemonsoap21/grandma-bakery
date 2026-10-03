@@ -75,10 +75,10 @@ a { color: var(--accent-deep); }
 .footer .credit { margin: 8px 0 0; font-family: inherit; font-style: normal; font-size: 0.75rem; }
 .footer .credit a { color: inherit; }
 .music-toggle {
-  margin-left: 8px; width: 36px; height: 36px; padding: 0; border-radius: 999px;
-  background: var(--accent-soft); color: var(--accent-deep); border-color: var(--accent-soft); font-size: 1.1rem; line-height: 1;
+  margin-left: 8px; padding: 6px 14px; border-radius: 999px; white-space: nowrap;
+  background: var(--accent-soft); color: var(--accent-deep); border-color: var(--accent-soft); font-size: 0.9rem;
 }
-.music-toggle.off { background: transparent; color: var(--muted); border-color: var(--border); text-decoration: line-through; }
+.music-toggle.off { background: transparent; color: var(--muted); border-color: var(--border); }
 .footer .heart { display: inline-block; margin: 0 4px; color: var(--accent); animation: beat 1.6s ease-in-out infinite; }
 @keyframes beat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.25); } 30% { transform: scale(1); } 45% { transform: scale(1.15); } }
 
