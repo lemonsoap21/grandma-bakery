@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, fmtDateTime, fmtMoney, fmtQty } from '../api.js';
+import { useDataChanged } from '../dataEvents.js';
 import CartRuns from './CartRuns.jsx';
 
 function greeting() {
@@ -26,6 +27,7 @@ export default function Dashboard() {
   useEffect(() => {
     load();
   }, [load]);
+  useDataChanged(load);
 
   async function refreshPrices() {
     setBusy(true);

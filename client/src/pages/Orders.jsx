@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, fmtDateTime } from '../api.js';
+import { useDataChanged } from '../dataEvents.js';
 
 const blankForm = () => ({ customerName: '', deliveryAt: '', items: [{ menuItemId: '', quantity: 1 }] });
 
@@ -11,6 +12,7 @@ export default function Orders() {
 
   const load = () => Promise.all([api.orders(), api.menu()]).then(([o, m]) => { setOrders(o); setMenu(m); }).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
+  useDataChanged(load);
 
   // Pieces the customer is ordering are counted in the menu item's own unit (e.g. cookies).
   const unitFor = (menuItemId) => {
