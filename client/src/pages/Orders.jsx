@@ -49,15 +49,18 @@ export default function Orders() {
   return (
     <>
       <div className="row between">
-        <h1>Orders</h1>
+        <div>
+          <h1>Orders</h1>
+          <p className="subtitle">Everyone who's waiting on your wonderful baking.</p>
+        </div>
         {!form && <button onClick={() => setForm(blankForm())} disabled={menu.length === 0}>New Order</button>}
       </div>
-      {menu.length === 0 && <p className="muted">Add menu items first so orders have something to reference.</p>}
+      {menu.length === 0 && <p className="empty">Add a recipe first, sweetheart, then we can take orders for it.</p>}
       {error && <p className="alert error">{error}</p>}
 
       {form && (
         <form className="card" onSubmit={submit}>
-          <h2>New order</h2>
+          <h2>A new order 💌</h2>
           <div className="row">
             <label>Customer<input required value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} /></label>
             <label>Delivery date &amp; time<input type="datetime-local" required value={form.deliveryAt} onChange={(e) => setForm({ ...form, deliveryAt: e.target.value })} /></label>
@@ -85,22 +88,24 @@ export default function Orders() {
         </form>
       )}
 
-      {orders.length === 0 && !form && <p className="muted">No orders yet.</p>}
+      {orders.length === 0 && !form && <p className="empty">No orders yet. They'll come, your baking is too good not to.</p>}
       {orders.length > 0 && (
-        <table>
-          <thead><tr><th>Due</th><th>Customer</th><th>Items</th><th>Status</th><th></th></tr></thead>
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.id} className={o.status === 'CANCELLED' ? 'dim' : ''}>
-                <td>{fmtDateTime(o.deliveryAt)}</td>
-                <td>{o.customerName}</td>
-                <td>{o.items.map((it) => (it.menuItem.batchSize > 1 ? `${it.quantity} ${it.menuItem.batchUnit} · ${it.menuItem.name}` : `${it.quantity}× ${it.menuItem.name}`)).join(', ')}</td>
-                <td><span className={`tag ${o.status}`}>{o.status.toLowerCase()}</span></td>
-                <td>{o.status === 'OPEN' && <button className="secondary" onClick={() => cancel(o.id)}>Cancel</button>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Due</th><th>Customer</th><th>Items</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              {orders.map((o) => (
+                <tr key={o.id} className={o.status === 'CANCELLED' ? 'dim' : ''}>
+                  <td>{fmtDateTime(o.deliveryAt)}</td>
+                  <td>{o.customerName}</td>
+                  <td className="wrap">{o.items.map((it) => (it.menuItem.batchSize > 1 ? `${it.quantity} ${it.menuItem.batchUnit} · ${it.menuItem.name}` : `${it.quantity}× ${it.menuItem.name}`)).join(', ')}</td>
+                  <td><span className={`tag ${o.status}`}>{o.status.toLowerCase()}</span></td>
+                  <td>{o.status === 'OPEN' && <button className="secondary small" onClick={() => cancel(o.id)}>Cancel</button>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );

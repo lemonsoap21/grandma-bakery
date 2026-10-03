@@ -9,9 +9,9 @@ export default function App() {
       <header className="topbar">
         <img className="brand" src="/logo.png" alt="Daniel" />
         <nav>
-          <NavLink to="/dashboard">Dashboard</NavLink>
+          <NavLink to="/dashboard">Our Week</NavLink>
           <NavLink to="/orders">Orders</NavLink>
-          <NavLink to="/menu">Menu</NavLink>
+          <NavLink to="/menu">Recipes</NavLink>
         </nav>
       </header>
       <main>
@@ -22,6 +22,9 @@ export default function App() {
           <Route path="/menu" element={<Menu />} />
         </Routes>
       </main>
+      <footer className="footer">
+        Made with all my love, just for you{' '}<span className="heart">♥</span>{' '}Daniel
+      </footer>
     </>
   );
 }

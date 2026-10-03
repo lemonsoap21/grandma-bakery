@@ -52,14 +52,17 @@ export default function Menu() {
   return (
     <>
       <div className="row between">
-        <h1>Menu</h1>
-        {!form && <button onClick={() => setForm(blankForm())}>Add Item</button>}
+        <div>
+          <h1>Your recipes</h1>
+          <p className="subtitle">Every one of them made with love.</p>
+        </div>
+        {!form && <button onClick={() => setForm(blankForm())}>Add recipe</button>}
       </div>
       {error && <p className="alert error">{error}</p>}
 
       {form && (
         <form className="card" onSubmit={submit}>
-          <h2>New menu item</h2>
+          <h2>A new recipe 🍰</h2>
           <label>Name<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
           <div className="row">
             <label>Prep time (min)<input type="number" min="0" required value={form.prepMinutes} onChange={(e) => setForm({ ...form, prepMinutes: e.target.value })} /></label>
@@ -92,18 +95,18 @@ export default function Menu() {
             <button type="button" className="secondary" onClick={() => setForm({ ...form, ingredients: [...form.ingredients, blankRow()] })}>+ Ingredient</button>
             <span className="spacer" />
             <button type="button" className="secondary" onClick={() => setForm(null)}>Cancel</button>
-            <button type="submit">Save item</button>
+            <button type="submit">Save recipe</button>
           </div>
         </form>
       )}
 
-      {items.length === 0 && !form && <p className="muted">No menu items yet. Add your first one.</p>}
+      {items.length === 0 && !form && <p className="empty">No recipes yet. I can't wait to see your first one.</p>}
       <div className="grid">
         {items.map((item) => (
           <article className="card" key={item.id}>
-            <div className="row between">
+            <div className="recipe-head">
               <h2>{item.name}</h2>
-              <button className="secondary" onClick={() => remove(item.id)}>Delete</button>
+              <button className="secondary small" onClick={() => remove(item.id)}>Delete</button>
             </div>
             <p className="muted">
               {item.batchSize > 1 && <>Makes {item.batchSize} {item.batchUnit} · </>}Prep {item.prepMinutes} min · Bake {item.bakeMinutes} min
