@@ -100,7 +100,7 @@ export default function ChatBox() {
                 aria-pressed={voice.enabled}
                 title={voice.enabled ? 'Daniel reads his replies aloud. Click to turn off.' : 'Click to have Daniel read his replies aloud.'}
               >
-                {voice.enabled ? '🔊 Voice on' : '🔇 Voice off'}
+                {voice.enabled ? '💞 Voice on' : '🤍 Voice off'}
               </button>
             )}
             <button type="button" className="secondary" onClick={close} aria-label="Close chat">✕</button>
@@ -153,7 +153,7 @@ export default function ChatBox() {
         aria-controls="chatbox"
         onClick={() => (open ? close() : openChat())}
       >
-        {open ? 'Close chat' : '💬 Ask Daniel'}
+        {open ? 'Close chat' : '💌 Ask Daniel'}
       </button>
     </>
   );

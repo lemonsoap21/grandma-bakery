@@ -218,9 +218,9 @@ The **Dashboard** shows your production schedule, aggregated ingredient needs, t
 ![Dashboard](./screenshots/dashboard.png)
 
 ### 4. Use the Chat
-Click **💬 Ask Daniel** in the bottom-right corner and type what you want done, or press 🎤 and say it. If something is missing, Daniel asks for it, and the page you're on updates as soon as a change is made.
+Click **💌 Ask Daniel** in the bottom-right corner and type what you want done, or press 🎤 and say it. If something is missing, Daniel asks for it, and the page you're on updates as soon as a change is made.
 
-Daniel answers the way grandma's husband would, and reads each reply aloud in a deep, unhurried voice (turn it off with **🔊 Voice on** in the chat header). Reading aloud uses the browser's built-in text-to-speech, also free: it picks a male voice when one is installed (macOS even has one called "Daniel") and lowers the pitch.
+Daniel answers the way grandma's husband would, and reads each reply aloud in a deep, unhurried voice (turn it off with **💞 Voice on** in the chat header). Reading aloud uses the browser's built-in text-to-speech, also free: it picks a male voice when one is installed (macOS even has one called "Daniel") and lowers the pitch.
 
 Talking uses the browser's built-in speech recognition, which is free. It works in Chrome, Edge and Safari (not Firefox, where the 🎤 button is hidden), needs microphone permission, and only runs on `localhost` or HTTPS. Chrome sends the audio to Google to turn it into text, so it needs an internet connection.
 

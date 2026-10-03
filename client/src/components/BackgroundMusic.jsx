@@ -43,7 +43,7 @@ export default function BackgroundMusic() {
         aria-pressed={playing}
         title={playing ? 'Mute the music' : 'Play wedding music'}
       >
-        {playing ? '🔊 Mute' : '🔇 Unmute'}
+        {playing ? '💞 Mute' : '💗 Unmute'}
       </button>
     </>
   );
