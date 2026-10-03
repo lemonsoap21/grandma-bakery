@@ -19,6 +19,9 @@ export const api = {
   cancelOrder: (id) => request(`/orders/${id}`, { method: 'DELETE' }),
   dashboard: () => request('/dashboard'),
   refreshPrices: () => request('/prices/refresh', { method: 'POST' }),
+  fillCartsNow: () => request('/cart-runs/fill-now', { method: 'POST' }),
+  markCartOrdered: (id, body) => request(`/cart-runs/${id}/ordered`, { method: 'POST', body }),
+  retryCart: (id) => request(`/cart-runs/${id}/retry`, { method: 'POST' }),
 };
 
 export const fmtDateTime = (value) =>

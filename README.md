@@ -37,7 +37,7 @@ Small bakeries spend hours every week manually figuring out what ingredients the
 | 📅 **Order Tracking** | See every item due, how many, and when, as a clear production schedule. |
 | ⚖️ **Ingredient Aggregation** | Scales each recipe by order size and totals ingredient needs across all upcoming orders. |
 | 💲 **Price Comparison** | Looks up current Canadian grocery prices with Claude web search and finds the cheapest store for each ingredient. |
-| 🤖 **Automated Purchasing** | Places ingredient orders with the cheapest supplier(s) for delivery to the bakery (simulated in this version). |
+| 🛒 **Cart Agent** | When an order is due, a Claude-driven browser fills your real store cart with the exact products and package counts. You check out; it never pays. |
 | ⏱️ **Smart Order Timing** | Balances shelf life, delivery lead time, and prep/bake time to pick the right moment to order. |
 | 💬 **Chat** | Add, cancel and look up orders in plain words ("add an order of 4 muffins for Sarah tomorrow at 2pm"). Runs in the browser with no AI service, so it's free. |
 
@@ -166,8 +166,11 @@ DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/daniel
 # a 7-day shelf life is used and prices fall back to sample stores)
 ANTHROPIC_API_KEY=
 
-# Ordering mode: "mock" simulates purchases and delivery
+# Ordering mode: "mock" simulates purchases and delivery; "browser" has the cart agent fill
+# your real store carts when orders come due (you check out). Sign in first: npm run agent:login
 SUPPLIER_MODE=mock
+# Set to true to hide the agent's browser window (stores block hidden browsers more often)
+AGENT_HEADLESS=false
 
 # Timing
 ORDER_SAFETY_BUFFER_HOURS=24
@@ -231,6 +234,20 @@ Talking uses the browser's built-in speech recognition, which is free. It works 
 | "Show the menu" / "Help" | Lists menu items / everything the chat understands |
 
 The chat understands a fixed set of phrasings (it lives in `client/src/assistant/`) rather than calling an AI model, so it costs nothing and works without an API key. It can't edit the menu or change an existing order; cancel and re-add instead.
+### 4. Let the cart agent fill your carts
+With `SUPPLIER_MODE=browser`, Daniel fills your store carts for you when each order's time comes. You still place the order.
+
+1. **Sign in once.** Run `npm run agent:login`. It opens the agent's browser on every store you have prices from. Sign in, and set your delivery address and a saved payment method on each store's site, then close the window. The agent reuses this browser profile (`server/.agent-browser`, never committed), so it never sees your passwords.
+2. **Turn it on.** Set `SUPPLIER_MODE=browser` in `.env` and restart the server.
+3. **Carts get filled.** When purchases come due, the scheduler groups them by store and the agent opens each product page, sets the number of packages and adds it to the cart, then checks the cart. To try it right away, click **Fill carts now** on the dashboard.
+4. **You check out.** The dashboard's **Carts ready for checkout** shows what's in each cart, the subtotal, a screenshot and a link to the cart. Check out on the store's site, then click **I placed this order** with the confirmation number. It moves to **Orders placed**.
+
+What the agent will and won't do:
+- It only adds the exact linked products. If one is out of stock or different, it adds nothing in its place and says so.
+- It never checks out, picks a delivery slot or enters payment. Checkout and payment buttons, checkout pages, card fields and other websites are blocked in code (`server/src/agent/guards.js`), not just by instructions to the model.
+- If a store asks it to sign in or shows a captcha, it stops and the cart shows **needs attention**. Run `npm run agent:login` again, then **Try again**.
+
+Each cart costs a little in Claude API usage (Claude Opus 5.5, typically well under a dollar). Big grocers actively block automated browsers, so expect occasional captchas, and automated shopping may go against a store's terms of use.
 
 ---
 
@@ -247,10 +264,10 @@ Daniel asks Claude, with its web search tool, for current shelf prices of each i
 | Shelf life | ✅ Claude web search | Sets how early an ingredient can arrive |
 | Availability | ⚙️ Simulated | Assumes in stock unless flagged in mock data |
 | Delivery lead times | ⚙️ Simulated | Feeds the timing algorithm |
-| Ordering | ⚙️ Simulated | Purchases are recorded in our database |
+| Ordering | 🛒 Cart agent (or ⚙️ simulated) | The agent fills your real cart and you check out; in `mock` mode purchases are simulated |
 
-### Why ordering is simulated
-Grocers don't offer public APIs for placing orders, so Daniel uses real price data with a simulated ordering layer. All ordering goes through our `SupplierAdapter` interface, so a real grocer integration can be added without changing the rest of the app.
+### Why the agent stops at the cart
+Grocers don't offer public APIs for placing orders, so the cart agent drives a real browser instead (Playwright, with Claude Opus 5.5 choosing each click). Paying is left to you on purpose: you see the cart, delivery slot and total before any money moves.
 
 ### Limitations
 - Prices come from store websites and flyers found by web search, so they are estimates, not live checkout prices, and can miss sales. Where nothing is found, Daniel falls back to sample prices.

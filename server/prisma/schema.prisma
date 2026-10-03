@@ -69,6 +69,7 @@ model Supplier {
   leadTimeHours Int // simulated
   prices        Price[]
   purchases     Purchase[]
+  cartRuns      CartRun[]
 }
 
 model Price {
@@ -80,6 +81,8 @@ model Price {
   source       String // web_search | fallback
   url          String? // page the price was found on (web_search only)
   packageInfo  String? // what was priced, e.g. "Five Roses All Purpose Flour, 2.5 kg for $4.47"
+  packageSize  Float? // base units (g, ml or each) in one package
+  packagePrice Float? // price of one package
   observedAt   DateTime
   fetchedAt    DateTime   @default(now())
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
@@ -98,11 +101,37 @@ model Purchase {
   currency       String
   orderAt        DateTime
   arriveBy       DateTime
-  status         String     @default("SCHEDULED") // SCHEDULED | PLACED | DELIVERED
+  // SCHEDULED → (browser mode) PREPARING → CART_READY | CART_FAILED → PLACED → DELIVERED
+  status         String     @default("SCHEDULED")
   orderItemIds   Int[] // order items this delivery covers
+  productUrl     String? // exact product page to buy from
+  packageInfo    String? // e.g. "No Name All-Purpose Flour, 10 kg for $9.88"
+  packages       Int? // how many packages to buy
+  cartRunId      Int?
   confirmationId String?
   placedAt       DateTime?
   createdAt      DateTime   @default(now())
   ingredient     Ingredient @relation(fields: [ingredientId], references: [id])
   supplier       Supplier   @relation(fields: [supplierId], references: [id])
+  cartRun        CartRun?   @relation(fields: [cartRunId], references: [id])
+}
+
+// One browser-agent run that fills a store cart for the purchases due there. The agent never
+// checks out; the baker places the order and records the confirmation number.
+model CartRun {
+  id             Int        @id @default(autoincrement())
+  supplierId     Int
+  status         String     @default("RUNNING") // RUNNING | READY | FAILED | ORDERED | DISMISSED
+  summary        String     @default("")
+  items          Json? // what the agent reports it put in the cart
+  cartUrl        String?
+  cartTotal      Float?
+  screenshot     String? // file name under server/agent-screenshots
+  steps          Int        @default(0)
+  confirmationId String?
+  startedAt      DateTime   @default(now())
+  finishedAt     DateTime?
+  orderedAt      DateTime?
+  supplier       Supplier   @relation(fields: [supplierId], references: [id])
+  purchases      Purchase[]
 }
